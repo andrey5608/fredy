@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2026 by Christian Kellner.
+ * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
+ */
+
+/*
  * Copyright (c) 2025 by Christian Kellner.
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
@@ -17,7 +22,6 @@ import Users from './views/user/Users';
 import Jobs from './views/jobs/Jobs';
 
 import './App.less';
-import TrackingModal from './components/tracking/TrackingModal.jsx';
 import { Banner, Divider } from '@douyinfe/semi-ui';
 import VersionBanner from './components/version/VersionBanner.jsx';
 import Listings from './views/listings/Listings.jsx';
@@ -84,7 +88,6 @@ export default function FredyApp() {
               <br />
             </>
           )}
-          {settings.analyticsEnabled === null && !settings.demoMode && <TrackingModal />}
           <Divider />
           <div className="app__content">
             <Routes>

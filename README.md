@@ -160,13 +160,6 @@ Jobs run automatically at the interval you configure (see
 
 Immoscout has implemented advanced bot detection. In order to work around this, we are using a reversed engineered version of their mobile api. See [Immoscout Reverse Engineering Documentation](https://github.com/orangecoding/fredy/blob/master/reverse-engineered-immoscout.md)
 
-## Analytics
-
-Fredy is completely free (and will always remain free). However, it would be a huge help if you’d allow me to collect some analytical data.
-Before you freak out, let me explain...  
-If you agree, Fredy will send a ping once every 6 hours to my internal tracking project (Will be open sourced soon).  
-The data includes: names of active adapters/providers, OS, architecture, Node version, and language. The information is entirely anonymous and helps me understand which adapters/providers are most frequently used.</p>
-
 **Thanks**🤘
 
 ## 🛠️ Development
