@@ -1,4 +1,9 @@
 /*
+ * Copyright (c) 2026 by Christian Kellner.
+ * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
+ */
+
+/*
  * Copyright (c) 2025 by Christian Kellner.
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
@@ -50,6 +55,17 @@ export const useFredyState = create(
               set(() => ({ notificationAdapter: Object.freeze([...response.json]) }));
             } catch (Exception) {
               console.error(`Error while trying to get resource for api/jobs/notificationAdapter. Error:`, Exception);
+            }
+          },
+          async getExistingAdapters() {
+            try {
+              const response = await xhrGet('/api/jobs/notificationAdapter/existing');
+              set(() => ({ notificationAdapterExisting: Object.freeze([...response.json]) }));
+            } catch (Exception) {
+              console.error(
+                `Error while trying to get resource for api/jobs/notificationAdapter/existing. Error:`,
+                Exception,
+              );
             }
           },
         },
@@ -212,6 +228,7 @@ export const useFredyState = create(
       const initial = {
         dashboard: { data: null },
         notificationAdapter: [],
+        notificationAdapterExisting: [],
         listingsData: {
           totalNumber: 0,
           page: 1,
