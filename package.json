@@ -16,15 +16,13 @@
     "lint": "eslint .",
     "lint:fix": "npx yarn lint --fix",
     "migratedb": "node lib/services/storage/migrations/migrate.js",
-    "migratedb:overwrite": "x-var MIGRATION_ALLOW_CHECKSUM_UPDATE=true node lib/services/storage/migrations/migrate.js",
-    "copyright": "node ./copyright.js"
+    "migratedb:overwrite": "x-var MIGRATION_ALLOW_CHECKSUM_UPDATE=true node lib/services/storage/migrations/migrate.js"
   },
   "type": "module",
   "lint-staged": {
     "*.{js,jsx}": [
       "npx yarn lint",
-      "npx yarn format",
-      "npx yarn copyright"
+      "npx yarn format"
     ]
   },
   "main": "index.js",
