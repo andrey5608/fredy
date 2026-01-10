@@ -52,6 +52,17 @@ export const useFredyState = create(
               console.error(`Error while trying to get resource for api/jobs/notificationAdapter. Error:`, Exception);
             }
           },
+          async getExistingAdapters() {
+            try {
+              const response = await xhrGet('/api/jobs/notificationAdapter/existing');
+              set(() => ({ notificationAdapterExisting: Object.freeze([...response.json]) }));
+            } catch (Exception) {
+              console.error(
+                `Error while trying to get resource for api/jobs/notificationAdapter/existing. Error:`,
+                Exception,
+              );
+            }
+          },
         },
         generalSettings: {
           async getGeneralSettings() {
@@ -234,6 +245,7 @@ export const useFredyState = create(
       const initial = {
         dashboard: { data: null },
         notificationAdapter: [],
+        notificationAdapterExisting: [],
         listingsData: {
           totalNumber: 0,
           page: 1,

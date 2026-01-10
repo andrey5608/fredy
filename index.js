@@ -9,7 +9,6 @@ import * as similarityCache from './lib/services/similarity-check/similarityCach
 import { runMigrations } from './lib/services/storage/migrations/migrate.js';
 import { ensureDemoUserExists, ensureAdminUserExists } from './lib/services/storage/userStorage.js';
 import { cleanupDemoAtMidnight } from './lib/services/crons/demoCleanup-cron.js';
-import { initTrackerCron } from './lib/services/crons/tracker-cron.js';
 import logger from './lib/services/logger.js';
 import { initActiveCheckerCron } from './lib/services/crons/listing-alive-cron.js';
 import { initGeocodingCron } from './lib/services/crons/geocoding-cron.js';
@@ -59,7 +58,6 @@ if (settings.demoMode) {
 
 ensureAdminUserExists();
 ensureDemoUserExists();
-await initTrackerCron();
 //do not wait for this to finish, let it run in the background
 initActiveCheckerCron();
 initGeocodingCron();

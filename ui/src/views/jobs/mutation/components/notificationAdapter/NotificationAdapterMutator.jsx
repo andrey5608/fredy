@@ -105,6 +105,16 @@ export default function NotificationAdapterMutator({
     }
   };
 
+  const renderMessageLines = (message) => {
+    if (message == null) return null;
+    const parts = String(message).split(/<br\s*\/?>|\n/);
+    return parts.map((line, idx) => (
+      <p key={idx} style={{ margin: 0 }}>
+        {line}
+      </p>
+    ));
+  };
+
   const onTry = () => {
     setValidationMessage(null);
     setSuccessMessage(null);
@@ -204,7 +214,7 @@ export default function NotificationAdapterMutator({
           closeIcon={null}
           title={<div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>Error</div>}
           style={{ marginBottom: '1rem' }}
-          description={<p dangerouslySetInnerHTML={{ __html: validationMessage }} />}
+          description={renderMessageLines(validationMessage)}
         />
       )}
       {successMessage != null && (
@@ -214,7 +224,7 @@ export default function NotificationAdapterMutator({
           closeIcon={null}
           title={<div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>Yay!</div>}
           style={{ marginBottom: '1rem' }}
-          description={<p dangerouslySetInnerHTML={{ __html: successMessage }} />}
+          description={renderMessageLines(successMessage)}
         />
       )}
 

@@ -3,7 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
 
 import NotificationAdapterMutator from './components/notificationAdapter/NotificationAdapterMutator';
 import NotificationAdapterTable from '../../../components/table/NotificationAdapterTable';
@@ -29,6 +29,7 @@ import {
 export default function JobMutator() {
   const jobs = useSelector((state) => state.jobsData.jobs);
   const shareableUserList = useSelector((state) => state.jobsData.shareableUserList);
+  const existingNotificationAdapters = useSelector((state) => state.notificationAdapterExisting);
   const params = useParams();
 
   const jobToBeEdit = params.jobId == null ? null : jobs.find((job) => job.id === params.jobId);
@@ -49,8 +50,35 @@ export default function JobMutator() {
   const [notificationAdapterData, setNotificationAdapterData] = useState(defaultNotificationAdapter);
   const [shareWithUsers, setShareWithUsers] = useState(jobToBeEdit?.shared_with_user ?? []);
   const [enabled, setEnabled] = useState(defaultEnabled);
+  const [reuseAdapterSelection, setReuseAdapterSelection] = useState(null);
   const navigate = useNavigate();
   const actions = useActions();
+
+  useEffect(() => {
+    actions.notificationAdapter.getAdapter();
+    actions.notificationAdapter.getExistingAdapters();
+    actions.jobsData.getSharableUserList();
+  }, [actions.notificationAdapter, actions.jobsData]);
+
+  const existingAdapterOptions = useMemo(() => {
+    return (existingNotificationAdapters || []).map((adapter, idx) => ({
+      value: `${adapter.id}-${adapter.sourceJobId}-${idx}`,
+      label: `${adapter.name} (${adapter.sourceJobName || 'Job'})`,
+      adapter,
+    }));
+  }, [existingNotificationAdapters]);
+
+  const addOrReplaceAdapter = (adapterConfig) => {
+    setNotificationAdapterData((prev) => {
+      const exists = prev.some(
+        (item) =>
+          item.id === adapterConfig.id &&
+          JSON.stringify(item.fields || {}) === JSON.stringify(adapterConfig.fields || {}),
+      );
+      if (exists) return prev;
+      return [...prev, adapterConfig];
+    });
+  };
 
   const isSavingEnabled = () => {
     return Boolean(notificationAdapterData.length && providerData.length && name);
@@ -174,6 +202,30 @@ export default function JobMutator() {
           >
             Add new Notification Adapter
           </Button>
+
+          {existingAdapterOptions.length > 0 && (
+            <div className="jobMutation__reuseAdapter">
+              <Select
+                filter
+                placeholder="Reuse adapter from another job"
+                style={{ maxWidth: '24rem' }}
+                value={reuseAdapterSelection}
+                optionList={existingAdapterOptions}
+                onChange={(value) => {
+                  setReuseAdapterSelection(value);
+                  const selectedOption = existingAdapterOptions.find((opt) => opt.value === value);
+                  if (selectedOption?.adapter) {
+                    addOrReplaceAdapter({
+                      id: selectedOption.adapter.id,
+                      name: selectedOption.adapter.name,
+                      fields: selectedOption.adapter.fields || {},
+                    });
+                  }
+                  setTimeout(() => setReuseAdapterSelection(null), 0);
+                }}
+              />
+            </div>
+          )}
 
           <NotificationAdapterTable
             notificationAdapter={notificationAdapterData}

@@ -50,7 +50,7 @@ const ListingsGrid = () => {
   const actions = useActions();
 
   const [page, setPage] = useState(1);
-  const pageSize = 40;
+  const pageSize = 20;
 
   const [sortField, setSortField] = useState('created_at');
   const [sortDir, setSortDir] = useState('desc');
