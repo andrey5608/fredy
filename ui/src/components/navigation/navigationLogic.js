@@ -3,7 +3,7 @@
  */
 
 export function navigationSelectHandler({ target, pathname, hash = '', navigate }) {
-  const runtimeHash = typeof window !== 'undefined' ? window.location.hash || '' : '';
+  const runtimeHash = typeof window !== 'undefined' && window.location ? window.location.hash || '' : '';
   const effectiveHash = hash || runtimeHash;
   const effectivePath = (effectiveHash && effectiveHash.replace(/^#/, '')) || pathname || '';
   const isJobEdit = effectivePath.startsWith('/jobs/edit') || effectivePath.startsWith('/jobs/new');
