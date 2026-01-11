@@ -30,7 +30,7 @@ export default function Navigation({ isAdmin }) {
     }
   }, [width]);
 
-  const handleNavigationClick = (target, location = location, navigate = navigate) => {
+  const handleNavigationClick = (target) => {
     navigationSelectHandler({ target, pathname: location.pathname, hash: location.hash, navigate });
   };
 
@@ -68,8 +68,8 @@ export default function Navigation({ isAdmin }) {
       items={items}
       isCollapsed={collapsed}
       selectedKeys={[parsePathName(location.pathname)]}
-      onSelect={(key) => {
-        () => handleNavigationClick(key, location, navigate);
+      onSelect={({ itemKey }) => {
+        handleNavigationClick(itemKey);
       }}
       header={<img src={collapsed ? heart : logoWhite} width={collapsed ? '80' : '160'} alt="Fredy Logo" />}
       footer={

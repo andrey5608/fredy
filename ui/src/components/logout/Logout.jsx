@@ -9,18 +9,22 @@ import { xhrPost } from '../../services/xhr';
 import { IconUser } from '@douyinfe/semi-icons';
 
 const Logout = function Logout({ text }) {
+  const showText = Boolean(text);
+  const icon = <IconUser />;
+
   return (
     <div>
       <Button
-        icon={<IconUser />}
+        icon={showText ? icon : null}
         type="danger"
         theme="solid"
+        aria-label="Logout"
         onClick={async () => {
           await xhrPost('/api/login/logout');
           location.reload();
         }}
       >
-        {text && 'Logout'}
+        {showText ? 'Logout' : icon}
       </Button>
     </div>
   );

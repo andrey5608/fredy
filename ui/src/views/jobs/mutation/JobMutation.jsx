@@ -367,6 +367,7 @@ export default function JobMutator() {
         footer={null}
         title="Leave page?"
         maskClosable={false}
+        bodyStyle={{ paddingBottom: 10 }}
       >
         <Typography.Paragraph>You have unsaved changes. Do you want to save before leaving?</Typography.Paragraph>
         {saveError &&
