@@ -182,6 +182,10 @@ const JobGrid = () => {
     setPage(_page);
   };
 
+  const handleCardClick = (jobId) => {
+    navigate(`/jobs/edit/${jobId}`);
+  };
+
   return (
     <div className="jobGrid">
       <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -275,6 +279,9 @@ const JobGrid = () => {
               className="jobGrid__card"
               bodyStyle={{ padding: '16px' }}
               headerLine={true}
+              hoverable
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleCardClick(job.id)}
               title={
                 <div className="jobGrid__header">
                   <Title heading={5} ellipsis={{ showTooltip: true }} className="jobGrid__title">
@@ -306,7 +313,10 @@ const JobGrid = () => {
                       Is active:
                     </Text>
                     <Switch
-                      onChange={(checked) => onJobStatusChanged(job.id, checked)}
+                      onChange={(checked, e) => {
+                        e.stopPropagation();
+                        onJobStatusChanged(job.id, checked);
+                      }}
                       style={{ marginLeft: 'auto' }}
                       checked={job.enabled}
                       disabled={job.isOnlyShared}
@@ -348,7 +358,10 @@ const JobGrid = () => {
                       theme="solid"
                       icon={<IconPlayCircle />}
                       disabled={job.isOnlyShared || job.running}
-                      onClick={() => onJobRun(job.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onJobRun(job.id);
+                      }}
                     />
                   </Popover>
                   <Popover content={getPopoverContent('Edit a Job')}>
@@ -357,7 +370,10 @@ const JobGrid = () => {
                       theme="solid"
                       icon={<IconEdit />}
                       disabled={job.isOnlyShared}
-                      onClick={() => navigate(`/jobs/edit/${job.id}`)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/jobs/edit/${job.id}`);
+                      }}
                     />
                   </Popover>
                   <Popover content={getPopoverContent('Delete all found Listings of this Job')}>
@@ -366,7 +382,10 @@ const JobGrid = () => {
                       theme="solid"
                       icon={<IconDescend2 />}
                       disabled={job.isOnlyShared}
-                      onClick={() => onListingRemoval(job.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onListingRemoval(job.id);
+                      }}
                     />
                   </Popover>
                   <Popover content={getPopoverContent('Delete Job')}>
@@ -375,7 +394,10 @@ const JobGrid = () => {
                       theme="solid"
                       icon={<IconDelete />}
                       disabled={job.isOnlyShared}
-                      onClick={() => onJobRemoval(job.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onJobRemoval(job.id);
+                      }}
                     />
                   </Popover>
                 </div>

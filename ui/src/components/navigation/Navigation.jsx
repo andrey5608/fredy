@@ -14,6 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import './Navigate.less';
 import { useFeature } from '../../hooks/featureHook.js';
 import { useScreenWidth } from '../../hooks/screenWidth.js';
+import { navigationSelectHandler } from './navigationLogic.js';
 
 export default function Navigation({ isAdmin }) {
   const navigate = useNavigate();
@@ -29,9 +30,13 @@ export default function Navigation({ isAdmin }) {
     }
   }, [width]);
 
+  const handleNavigationClick = (target, location = location, navigate = navigate) => {
+    navigationSelectHandler({ target, pathname: location.pathname, hash: location.hash, navigate });
+  };
+
   const items = [
     { itemKey: '/dashboard', text: 'Dashboard', icon: <IconHistogram /> },
-    { itemKey: '/jobs', text: 'Jobs', icon: <IconTerminal /> },
+    { itemKey: '/jobs', text: 'Jobs', icon: <IconTerminal />, onClick: () => handleNavigationClick('/jobs') },
     { itemKey: '/listings', text: 'Listings', icon: <IconStar /> },
   ];
 
@@ -64,14 +69,14 @@ export default function Navigation({ isAdmin }) {
       isCollapsed={collapsed}
       selectedKeys={[parsePathName(location.pathname)]}
       onSelect={(key) => {
-        navigate(key.itemKey);
+        () => handleNavigationClick(key, location, navigate);
       }}
       header={<img src={collapsed ? heart : logoWhite} width={collapsed ? '80' : '160'} alt="Fredy Logo" />}
       footer={
         <Nav.Footer className="navigate__footer">
           <Logout text={!collapsed} />
           <Button icon={<IconSidebar />} onClick={() => setCollapsed(!collapsed)}>
-            {!collapsed && 'Collapse'}
+            {collapsed ? '➠' : 'Collapse'}
           </Button>
         </Nav.Footer>
       }

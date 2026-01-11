@@ -12,8 +12,10 @@ import babelParser from '@babel/eslint-parser';
 
 export default [
   {
-    files: ['**/*.{js,jsx,ts,tsx}'],
     ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/public/**', 'db/**', 'conf/**'],
+  },
+  {
+    files: ['**/*.{js,jsx,ts,tsx}'],
   },
   js.configs.recommended,
   prettier,
