@@ -3,7 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React, { Fragment, useEffect, useMemo, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useState, useLayoutEffect } from 'react';
 
 import NotificationAdapterMutator from './components/notificationAdapter/NotificationAdapterMutator';
 import NotificationAdapterTable from '../../../components/table/NotificationAdapterTable';
@@ -13,7 +13,18 @@ import Headline from '../../../components/headline/Headline';
 import { useActions, useSelector } from '../../../services/state/store';
 import { xhrPost } from '../../../services/xhr';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Divider, Input, Switch, Button, TagInput, Toast, Select } from '@douyinfe/semi-ui';
+import {
+  Divider,
+  Input,
+  Switch,
+  Button,
+  TagInput,
+  Toast,
+  Select,
+  Modal,
+  Typography,
+  Notification,
+} from '@douyinfe/semi-ui';
 import './JobMutation.less';
 import { SegmentPart } from '../../../components/segment/SegmentPart';
 import {
@@ -51,8 +62,22 @@ export default function JobMutator() {
   const [shareWithUsers, setShareWithUsers] = useState(jobToBeEdit?.shared_with_user ?? []);
   const [enabled, setEnabled] = useState(defaultEnabled);
   const [reuseAdapterSelection, setReuseAdapterSelection] = useState(null);
+  const [pendingNavigation, setPendingNavigation] = useState(null);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [saveError, setSaveError] = useState(null);
+  const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const actions = useActions();
+
+  useEffect(() => {
+    // Sync form and baseline when switching between jobs or when data arrives later
+    setName(defaultName);
+    setEnabled(defaultEnabled);
+    setBlacklist(defaultBlacklist);
+    setProviderData(defaultProviderData);
+    setNotificationAdapterData(defaultNotificationAdapter);
+    setShareWithUsers(jobToBeEdit?.shared_with_user ?? []);
+  }, [defaultName, defaultEnabled, defaultBlacklist, defaultProviderData, defaultNotificationAdapter, jobToBeEdit]);
 
   useEffect(() => {
     actions.notificationAdapter.getAdapter();
@@ -67,6 +92,8 @@ export default function JobMutator() {
       adapter,
     }));
   }, [existingNotificationAdapters]);
+
+  // Legacy change detection hooks were unused; remove to satisfy lint
 
   const addOrReplaceAdapter = (adapterConfig) => {
     setNotificationAdapterData((prev) => {
@@ -90,7 +117,9 @@ export default function JobMutator() {
     );
   };
 
-  const mutateJob = async () => {
+  const mutateJob = async ({ redirectToJobs = true } = {}) => {
+    setSaveError(null);
+    setSaving(true);
     try {
       await xhrPost('/api/jobs', {
         provider: providerData,
@@ -103,12 +132,45 @@ export default function JobMutator() {
       });
       await actions.jobsData.getJobs();
       Toast.success('Job successfully saved...');
-      navigate('/jobs');
+      if (redirectToJobs) {
+        navigate('/jobs');
+      }
+      return { ok: true };
     } catch (Exception) {
-      console.error(Exception.json.message);
+      const message = Exception?.json?.message || Exception?.message || 'Failed to save job';
+      console.error(message);
       Toast.error(Exception.json != null ? Exception.json.message : Exception);
+      setSaveError(message);
+      return { ok: false, message };
+    } finally {
+      setSaving(false);
     }
   };
+
+  useLayoutEffect(() => {
+    // Expose a direct callback for nav to trigger confirmation reliably (HashRouter friendly)
+    window.__jobNavConfirm = (target) => {
+      setPendingNavigation(target);
+      setConfirmVisible(true);
+      setSaveError(null);
+    };
+
+    const handler = (e) => {
+      const target = e.detail?.target;
+      if (target === '/jobs') {
+        // Always confirm when leaving the job form via nav
+        setPendingNavigation(target);
+        setConfirmVisible(true);
+        setSaveError(null);
+      }
+    };
+
+    window.addEventListener('jobNavigationRequest', handler);
+    return () => {
+      window.removeEventListener('jobNavigationRequest', handler);
+      delete window.__jobNavConfirm;
+    };
+  }, [navigate]);
 
   return (
     <Fragment>
@@ -288,10 +350,66 @@ export default function JobMutator() {
         <Button type="danger" style={{ marginRight: '1rem' }} onClick={() => navigate('/jobs')}>
           Cancel
         </Button>
-        <Button type="primary" icon={<IconPlusCircle />} disabled={!isSavingEnabled()} onClick={mutateJob}>
+        <Button
+          type="primary"
+          icon={<IconPlusCircle />}
+          disabled={!isSavingEnabled() || saving}
+          loading={saving}
+          onClick={() => mutateJob()}
+        >
           Save
         </Button>
       </form>
+
+      <Modal
+        visible={confirmVisible}
+        onCancel={() => setConfirmVisible(false)}
+        footer={null}
+        title="Leave page?"
+        maskClosable={false}
+      >
+        <Typography.Paragraph>You have unsaved changes. Do you want to save before leaving?</Typography.Paragraph>
+        {saveError &&
+          Notification.error({
+            title: 'Save failed',
+            content: saveError,
+            duration: 3,
+          })}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+          <Button onClick={() => setConfirmVisible(false)}>Cancel</Button>
+          <Button
+            theme="solid"
+            type="warning"
+            onClick={() => {
+              setConfirmVisible(false);
+              const target = pendingNavigation || '/jobs';
+              if (target) {
+                navigate(target, { replace: true });
+                if (typeof window !== 'undefined') {
+                  const normalized = '#' + String(target).replace(/^#?/, '').replace(/^\/?/, '/');
+                  window.location.hash = normalized;
+                }
+              }
+            }}
+          >
+            Don't Save
+          </Button>
+          <Button
+            theme="solid"
+            type="primary"
+            loading={saving}
+            onClick={async () => {
+              const result = await mutateJob({ redirectToJobs: false });
+              if (result.ok) {
+                setConfirmVisible(false);
+                if (pendingNavigation) navigate(pendingNavigation);
+              }
+            }}
+          >
+            Save
+          </Button>
+        </div>
+      </Modal>
     </Fragment>
   );
 }

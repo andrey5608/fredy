@@ -16,7 +16,8 @@
     "lint": "eslint .",
     "lint:fix": "npx yarn lint --fix",
     "migratedb": "node lib/services/storage/migrations/migrate.js",
-    "migratedb:overwrite": "x-var MIGRATION_ALLOW_CHECKSUM_UPDATE=true node lib/services/storage/migrations/migrate.js"
+    "migratedb:overwrite": "x-var MIGRATION_ALLOW_CHECKSUM_UPDATE=true node lib/services/storage/migrations/migrate.js",
+    "test:e2e": "playwright test"
   },
   "type": "module",
   "lint-staged": {
@@ -99,6 +100,7 @@
     "@babel/eslint-parser": "7.28.6",
     "@babel/preset-env": "7.28.6",
     "@babel/preset-react": "7.28.5",
+    "@playwright/test": "^1.57.0",
     "chai": "6.2.2",
     "eslint": "9.39.2",
     "eslint-config-prettier": "10.1.8",
