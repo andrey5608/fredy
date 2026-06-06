@@ -17,15 +17,28 @@ import Users from './views/user/Users';
 import Jobs from './views/jobs/Jobs';
 
 import './App.less';
-import { Banner, Divider } from '@douyinfe/semi-ui';
+import { Banner, LocaleProvider } from '@douyinfe/semi-ui-19';
 import VersionBanner from './components/version/VersionBanner.jsx';
 import Listings from './views/listings/Listings.jsx';
 import MapView from './views/listings/Map.jsx';
 import Navigation from './components/navigation/Navigation.jsx';
-import { Layout } from '@douyinfe/semi-ui';
+import { Layout } from '@douyinfe/semi-ui-19';
 import FredyFooter from './components/footer/FredyFooter.jsx';
 import WatchlistManagement from './views/listings/management/WatchlistManagement.jsx';
 import Dashboard from './views/dashboard/Dashboard.jsx';
+import ListingDetail from './views/listings/ListingDetail.jsx';
+import NewsModal from './components/news/NewsModal.jsx';
+import { I18nProvider, availableLanguages } from './services/i18n/i18n.jsx';
+
+const semiLocaleModules = import.meta.glob('/node_modules/@douyinfe/semi-ui-19/lib/es/locale/source/*.js', {
+  eager: true,
+});
+
+const semiLocales = {};
+for (const [path, mod] of Object.entries(semiLocaleModules)) {
+  const name = path.match(/\/source\/(\w+)\.js$/)?.[1];
+  if (name) semiLocales[name] = mod.default ?? mod;
+}
 
 export default function FredyApp() {
   const actions = useActions();
@@ -33,17 +46,18 @@ export default function FredyApp() {
   const currentUser = useSelector((state) => state.user.currentUser);
   const versionUpdate = useSelector((state) => state.versionUpdate.versionUpdate);
   const settings = useSelector((state) => state.generalSettings.settings);
+  const language = useSelector((state) => state.userSettings.settings.language);
 
   useEffect(() => {
     async function init() {
       await actions.user.getCurrentUser();
       if (!needsLogin()) {
-        await actions.features.getFeatures();
         await actions.provider.getProvider();
         await actions.jobsData.getJobs();
         await actions.jobsData.getSharableUserList();
         await actions.notificationAdapter.getAdapter();
         await actions.generalSettings.getGeneralSettings();
+        await actions.userSettings.getUserSettings();
         await actions.versionUpdate.getVersionUpdate();
       }
       setLoading(false);
@@ -57,88 +71,90 @@ export default function FredyApp() {
   };
 
   const isAdmin = () => currentUser != null && currentUser.isAdmin;
-  const { Footer, Sider, Content } = Layout;
+  const { Sider, Content } = Layout;
 
-  return loading ? null : needsLogin() ? (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="*" element={<Navigate to="/login" replace />} />
-    </Routes>
-  ) : (
-    <Layout className="app">
-      <Layout className="app">
-        <Sider>
-          <Navigation isAdmin={isAdmin()} />
-        </Sider>
-        <Content>
-          {versionUpdate?.newVersion && <VersionBanner />}
-          {settings.demoMode && (
-            <>
-              <Banner
-                fullMode={true}
-                type="info"
-                bordered
-                closeIcon={null}
-                description="You're currently viewing the demo version of Fredy. Jobs won't scrape websites, and any changes you make will be reverted at midnight."
-              />
-              <br />
-            </>
-          )}
-          <Divider />
-          <div className="app__content">
-            <Routes>
-              <Route path="/403" element={<InsufficientPermission />} />
-              <Route path="/jobs/new" element={<JobMutation />} />
-              <Route path="/jobs/edit/:jobId" element={<JobMutation />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/jobs" element={<Jobs />} />
-              <Route path="/listings" element={<Listings />} />
-              <Route path="/map" element={<MapView />} />
-              <Route path="/watchlistManagement" element={<WatchlistManagement />} />
+  return loading ? null : (
+    <I18nProvider language={language ?? 'en'}>
+      <LocaleProvider
+        locale={
+          semiLocales[availableLanguages.find((l) => l.code === (language ?? 'en'))?.semiLocale] ?? semiLocales['en_US']
+        }
+      >
+        {needsLogin() ? (
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        ) : (
+          <Layout className="app">
+            <Sider>
+              <Navigation isAdmin={isAdmin()} />
+            </Sider>
+            <Layout className="app__main">
+              <Content className="app__content">
+                {versionUpdate?.newVersion && <VersionBanner />}
+                {settings.demoMode && (
+                  <>
+                    <Banner
+                      fullMode={true}
+                      type="info"
+                      bordered
+                      closeIcon={null}
+                      description="You're currently viewing the demo version of Fredy. Jobs won't scrape websites, and any changes you make will be reverted at midnight."
+                    />
+                    <br />
+                  </>
+                )}
+                {!settings.demoMode && <NewsModal />}
+                <Routes>
+                  <Route path="/403" element={<InsufficientPermission />} />
+                  <Route path="/jobs/new" element={<JobMutation />} />
+                  <Route path="/jobs/edit/:jobId" element={<JobMutation />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/jobs" element={<Jobs />} />
+                  <Route path="/listings" element={<Listings />} />
+                  <Route path="/listings/watchlist" element={<Listings mode="watchlist" />} />
+                  <Route path="/listings/listing/:listingId" element={<ListingDetail />} />
+                  <Route path="/map" element={<MapView />} />
+                  <Route path="/watchlistManagement" element={<WatchlistManagement />} />
 
-              {/* Permission-aware routes */}
-              <Route
-                path="/users/new"
-                element={
-                  <PermissionAwareRoute currentUser={currentUser}>
-                    <UserMutator />
-                  </PermissionAwareRoute>
-                }
-              />
-              <Route
-                path="/users/edit/:userId"
-                element={
-                  <PermissionAwareRoute currentUser={currentUser}>
-                    <UserMutator />
-                  </PermissionAwareRoute>
-                }
-              />
-              <Route
-                path="/users"
-                element={
-                  <PermissionAwareRoute currentUser={currentUser}>
-                    <Users />
-                  </PermissionAwareRoute>
-                }
-              />
-              <Route
-                path="/generalSettings"
-                element={
-                  <PermissionAwareRoute currentUser={currentUser}>
-                    <GeneralSettings />
-                  </PermissionAwareRoute>
-                }
-              />
+                  {/* Permission-aware routes */}
+                  <Route
+                    path="/users/new"
+                    element={
+                      <PermissionAwareRoute currentUser={currentUser}>
+                        <UserMutator />
+                      </PermissionAwareRoute>
+                    }
+                  />
+                  <Route
+                    path="/users/edit/:userId"
+                    element={
+                      <PermissionAwareRoute currentUser={currentUser}>
+                        <UserMutator />
+                      </PermissionAwareRoute>
+                    }
+                  />
+                  <Route
+                    path="/users"
+                    element={
+                      <PermissionAwareRoute currentUser={currentUser}>
+                        <Users />
+                      </PermissionAwareRoute>
+                    }
+                  />
+                  <Route path="/userSettings" element={<Navigate to="/generalSettings" replace />} />
+                  <Route path="/generalSettings" element={<GeneralSettings />} />
 
-              <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            </Routes>
-          </div>
-        </Content>
-      </Layout>
-      <Footer>
-        <FredyFooter />
-      </Footer>
-    </Layout>
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                </Routes>
+              </Content>
+              <FredyFooter />
+            </Layout>
+          </Layout>
+        )}
+      </LocaleProvider>
+    </I18nProvider>
   );
 }
 

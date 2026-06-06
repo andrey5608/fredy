@@ -3,16 +3,17 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 
 import { transform } from '../../../../../services/transformer/notificationAdapterTransformer';
 import { xhrPost } from '../../../../../services/xhr';
 import Help from './NotificationHelpDisplay';
 import { useSelector } from '../../../../../services/state/store';
-import { Banner, Button, Form, Modal, Select, Switch } from '@douyinfe/semi-ui';
+import { Banner, Button, Form, Modal, Select, Switch } from '@douyinfe/semi-ui-19';
 
 import './NotificationAdapterMutator.less';
 import { useScreenWidth } from '../../../../../hooks/screenWidth.js';
+import { useTranslation } from '../../../../../services/i18n/i18n.jsx';
 
 const sortAdapter = (a, b) => {
   if (a.name < b.name) {
@@ -24,26 +25,29 @@ const sortAdapter = (a, b) => {
   return 0;
 };
 
-const validate = (selectedAdapter) => {
+const validate = (selectedAdapter, t) => {
   const results = [];
   for (let uiElement of Object.values(selectedAdapter.fields || [])) {
-    if (uiElement.value == null && !uiElement.optional) {
-      results.push('All fields are mandatory and must be set.');
+    if (uiElement.value == null && !uiElement.optional && uiElement.type !== 'boolean') {
+      results.push(t('notification.validationAllMandatory'));
       continue;
+    }
+    if (uiElement.type === 'boolean' && typeof uiElement.value !== 'boolean') {
+      uiElement.value = false;
     }
     if (uiElement.type === 'number') {
       const numberValue = parseFloat(uiElement.value);
       if (isNaN(numberValue) || numberValue < 0) {
-        results.push('A number field cannot contain anything else and must be > 0.');
+        results.push(t('notification.validationNumberField'));
         continue;
       }
     }
     if (uiElement.type === 'boolean' && typeof uiElement.value !== 'boolean') {
-      results.push('A boolean field cannot be of a different type.');
+      results.push(t('notification.validationBooleanField'));
       continue;
     }
     if (typeof uiElement.value === 'string' && uiElement.value.length === 0 && !uiElement.optional) {
-      results.push('All fields are mandatory and must be set.');
+      results.push(t('notification.validationAllMandatory'));
     }
   }
 
@@ -67,10 +71,13 @@ export default function NotificationAdapterMutator({
   editNotificationAdapter,
   onData,
 } = {}) {
+  const t = useTranslation();
   const adapter = useSelector((state) => state.notificationAdapter);
 
   const preFilledSelectedAdapter =
-    editNotificationAdapter == null ? null : adapter.find((a) => a.id === editNotificationAdapter.id);
+    editNotificationAdapter == null
+      ? null
+      : adapter.filter((a) => a != null).find((a) => a.id === editNotificationAdapter.id);
 
   spreadPrefilledAdapterWithValues(preFilledSelectedAdapter, editNotificationAdapter?.fields);
 
@@ -83,7 +90,7 @@ export default function NotificationAdapterMutator({
 
   const onSubmit = (doStore) => {
     if (doStore) {
-      const validationResults = validate(selectedAdapter);
+      const validationResults = validate(selectedAdapter, t);
       if (validationResults.length > 0) {
         setValidationMessage(validationResults.join('<br/>'));
         return;
@@ -105,21 +112,11 @@ export default function NotificationAdapterMutator({
     }
   };
 
-  const renderMessageLines = (message) => {
-    if (message == null) return null;
-    const parts = String(message).split(/<br\s*\/?>|\n/);
-    return parts.map((line, idx) => (
-      <p key={idx} style={{ margin: 0 }}>
-        {line}
-      </p>
-    ));
-  };
-
   const onTry = () => {
     setValidationMessage(null);
     setSuccessMessage(null);
 
-    const validationResults = validate(selectedAdapter);
+    const validationResults = validate(selectedAdapter, t);
     if (validationResults.length > 0) {
       setValidationMessage(validationResults.join('<br/>'));
       return;
@@ -132,11 +129,9 @@ export default function NotificationAdapterMutator({
       },
     })
       .then(() => {
-        setSuccessMessage('It seems like it worked! Please check your service.');
+        setSuccessMessage(t('notification.trySuccess'));
       })
-      .catch((error) =>
-        setValidationMessage(`This did not work :-( I've received the following error: ${error.json.message}`),
-      );
+      .catch((error) => setValidationMessage(t('notification.tryError', { error: error.json.message })));
   };
 
   const setValue = (selectedAdapter, uiElement, key, value) => {
@@ -163,12 +158,22 @@ export default function NotificationAdapterMutator({
       return (
         <Form key={key}>
           {uiElement.type === 'boolean' ? (
-            <Switch
-              checked={uiElement.value || false}
-              onChange={(checked) => {
-                setValue(selectedAdapter, uiElement, key, checked);
-              }}
-            />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                <Switch
+                  checked={uiElement.value || false}
+                  onChange={(checked) => {
+                    setValue(selectedAdapter, uiElement, key, checked);
+                  }}
+                />
+                {uiElement.label}
+              </div>
+              {uiElement.description && (
+                <div className="semi-form-field-extra" style={{ marginTop: '4px' }}>
+                  {uiElement.description}
+                </div>
+              )}
+            </div>
           ) : (
             <Form.Input
               style={{ width: '100%' }}
@@ -177,6 +182,7 @@ export default function NotificationAdapterMutator({
               initValue={uiElement.value ?? ''}
               placeholder={uiElement.label}
               label={uiElement.label}
+              extraText={uiElement.description}
               onChange={(value) => {
                 setValue(selectedAdapter, uiElement, key, value);
               }}
@@ -189,64 +195,35 @@ export default function NotificationAdapterMutator({
 
   return (
     <Modal
-      title={title != null ? title : 'Adding a new Notification Adapter'}
+      title={title != null ? title : t('notification.defaultTitle')}
       visible={visible}
       style={{ width: isMobile ? '95%' : '50rem' }}
       onCancel={() => onSubmit(false)}
       footer={
         <div>
           <Button type="secondary" disabled={selectedAdapter == null} style={{ float: 'left' }} onClick={onTry}>
-            Try
+            {t('notification.try')}
           </Button>
           <Button theme="light" type="tertiary" onClick={() => onSubmit(false)}>
-            Cancel
+            {t('notification.cancel')}
           </Button>
           <Button theme="solid" type="primary" onClick={() => onSubmit(true)}>
-            Save
+            {t('notification.save')}
           </Button>
         </div>
       }
     >
-      {validationMessage != null && (
-        <Banner
-          fullMode={false}
-          type="danger"
-          closeIcon={null}
-          title={<div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>Error</div>}
-          style={{ marginBottom: '1rem' }}
-          description={renderMessageLines(validationMessage)}
-        />
-      )}
-      {successMessage != null && (
-        <Banner
-          fullMode={false}
-          type="success"
-          closeIcon={null}
-          title={<div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>Yay!</div>}
-          style={{ marginBottom: '1rem' }}
-          description={renderMessageLines(successMessage)}
-        />
-      )}
-
-      {description != null ? (
-        <p>{description}</p>
-      ) : (
-        <p>
-          When Fredy finds new listings, we like to report them to you. To do so, notification adapter can be
-          configured. <br />
-          There are multiple ways how Fredy can send new listings to you. Chose your weapon...
-        </p>
-      )}
+      {description != null ? <p>{description}</p> : <p>{t('notification.description')}</p>}
 
       <Select
         filter
-        placeholder="Select a notification adapter"
+        placeholder={t('notification.selectPlaceholder')}
         className="providerMutator__fields"
         value={selectedAdapter == null ? '' : selectedAdapter.id}
         optionList={adapter
+          .filter((a) => a != null)
           .map((a) => {
             return {
-              otherKey: a.id,
               value: a.id,
               label: a.name,
             };
@@ -255,7 +232,7 @@ export default function NotificationAdapterMutator({
           .filter((option) =>
             editNotificationAdapter != null
               ? true
-              : selected.find((selectedOption) => selectedOption.id === option.key) == null,
+              : selected.find((selectedOption) => selectedOption.id === option.value) == null,
           )
           .sort(sortAdapter)}
         onChange={(value) => {
@@ -274,6 +251,36 @@ export default function NotificationAdapterMutator({
           <br />
           {selectedAdapter.readme != null && <Help readme={selectedAdapter.readme} />}
           <br />
+
+          {validationMessage != null && (
+            <Banner
+              fullMode={false}
+              type="danger"
+              closeIcon={null}
+              title={
+                <div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>
+                  {t('notification.errorTitle')}
+                </div>
+              }
+              style={{ marginBottom: '1rem' }}
+              description={<p dangerouslySetInnerHTML={{ __html: validationMessage }} />}
+            />
+          )}
+          {successMessage != null && (
+            <Banner
+              fullMode={false}
+              type="success"
+              closeIcon={null}
+              title={
+                <div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>
+                  {t('notification.successTitle')}
+                </div>
+              }
+              style={{ marginBottom: '1rem' }}
+              description={<p dangerouslySetInnerHTML={{ __html: successMessage }} />}
+            />
+          )}
+
           {getFieldsFor(selectedAdapter)}
         </>
       )}

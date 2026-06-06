@@ -3,30 +3,41 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
-import { useActions, useSelector } from '../../services/state/store';
+import { useActions, useSelector, useIsLoading } from '../../services/state/store';
+import { useTranslation, availableLanguages } from '../../services/i18n/i18n.jsx';
 
-import { Divider, TimePicker, Button, Checkbox, Input, Modal } from '@douyinfe/semi-ui';
-import { InputNumber } from '@douyinfe/semi-ui';
-import { xhrPost } from '../../services/xhr';
+import {
+  Tabs,
+  TabPane,
+  TimePicker,
+  Button,
+  Checkbox,
+  Input,
+  Modal,
+  AutoComplete,
+  Select,
+  Banner,
+  Radio,
+  RadioGroup,
+  Typography,
+} from '@douyinfe/semi-ui-19';
+import { InputNumber } from '@douyinfe/semi-ui-19';
+import { xhrPost, xhrGet } from '../../services/xhr';
+import { Toast } from '@douyinfe/semi-ui-19';
 import { SegmentPart } from '../../components/segment/SegmentPart';
-import { Banner, Toast } from '@douyinfe/semi-ui';
 import {
   downloadBackup as downloadBackupZip,
   precheckRestore as clientPrecheckRestore,
   restore as clientRestore,
 } from '../../services/backupRestoreClient';
-import {
-  IconSave,
-  IconCalendar,
-  IconRefresh,
-  IconSignal,
-  IconLineChartStroked,
-  IconSearch,
-  IconFolder,
-} from '@douyinfe/semi-icons';
+import { IconSave, IconRefresh, IconSignal, IconHome, IconFolder } from '@douyinfe/semi-icons';
+import { debounce } from '../../utils';
+import Headline from '../../components/headline/Headline.jsx';
 import './GeneralSettings.less';
+
+const { Text } = Typography;
 
 function formatFromTimestamp(ts) {
   const date = new Date(ts);
@@ -46,22 +57,40 @@ function formatFromTBackend(time) {
 
 const GeneralSettings = function GeneralSettings() {
   const actions = useActions();
+  const t = useTranslation();
   const [loading, setLoading] = React.useState(true);
 
   const settings = useSelector((state) => state.generalSettings.settings);
+  const currentUser = useSelector((state) => state.user.currentUser);
+  const language = useSelector((state) => state.userSettings.settings.language);
 
   const [interval, setInterval] = React.useState('');
+  const [proxyUrl, setProxyUrl] = React.useState('');
   const [port, setPort] = React.useState('');
   const [workingHourFrom, setWorkingHourFrom] = React.useState(null);
   const [workingHourTo, setWorkingHourTo] = React.useState(null);
   const [demoMode, setDemoMode] = React.useState(null);
   const [analyticsEnabled, setAnalyticsEnabled] = React.useState(null);
   const [sqlitePath, setSqlitePath] = React.useState(null);
+  const [baseUrl, setBaseUrl] = React.useState('');
   const fileInputRef = React.useRef(null);
   const [restoreModalVisible, setRestoreModalVisible] = React.useState(false);
   const [precheckInfo, setPrecheckInfo] = React.useState(null);
   const [restoreBusy, setRestoreBusy] = React.useState(false);
   const [selectedRestoreFile, setSelectedRestoreFile] = React.useState(null);
+
+  // User settings state
+  const homeAddress = useSelector((state) => state.userSettings.settings.home_address);
+  const providerDetails = useSelector((state) => state.userSettings.settings.provider_details);
+  const listingDeletionPreference = useSelector((state) => state.userSettings.settings.listing_deletion_preference);
+  const allProviders = useSelector((state) => state.provider);
+  const [address, setAddress] = useState(homeAddress?.address || '');
+  const [coords, setCoords] = useState(homeAddress?.coords || null);
+  const [listingDeleteHard, setListingDeleteHard] = useState(false);
+  const [listingDeleteSkipPrompt, setListingDeleteSkipPrompt] = useState(false);
+  const saving = useIsLoading(actions.userSettings.setHomeAddress);
+  const savingLanguage = useIsLoading(actions.userSettings.setLanguage);
+  const [dataSource, setDataSource] = useState([]);
 
   React.useEffect(() => {
     async function init() {
@@ -75,42 +104,55 @@ const GeneralSettings = function GeneralSettings() {
   React.useEffect(() => {
     async function init() {
       setInterval(settings?.interval);
+      setProxyUrl(settings?.proxyUrl ?? '');
       setPort(settings?.port);
       setWorkingHourFrom(settings?.workingHours?.from);
       setWorkingHourTo(settings?.workingHours?.to);
       setAnalyticsEnabled(settings?.analyticsEnabled || false);
       setDemoMode(settings?.demoMode || false);
       setSqlitePath(settings?.sqlitepath);
+      setBaseUrl(settings?.baseUrl ?? '');
     }
 
     init();
   }, [settings]);
 
+  useEffect(() => {
+    setAddress(homeAddress?.address || '');
+    setCoords(homeAddress?.coords || null);
+  }, [homeAddress]);
+
+  useEffect(() => {
+    setListingDeleteHard(listingDeletionPreference?.hardDelete ?? false);
+    setListingDeleteSkipPrompt(listingDeletionPreference?.skipPrompt ?? false);
+  }, [listingDeletionPreference]);
+
   const nullOrEmpty = (val) => val == null || val.length === 0;
 
   const handleStore = async () => {
     if (nullOrEmpty(interval)) {
-      Toast.error('Interval may not be empty.');
+      Toast.error(t('settings.toastIntervalEmpty'));
       return;
     }
     if (nullOrEmpty(port)) {
-      Toast.error('Port may not be empty.');
+      Toast.error(t('settings.toastPortEmpty'));
       return;
     }
     if (
       (!nullOrEmpty(workingHourFrom) && nullOrEmpty(workingHourTo)) ||
       (nullOrEmpty(workingHourFrom) && !nullOrEmpty(workingHourTo))
     ) {
-      Toast.error('Working hours to and from must be set if either to or from has been set before.');
+      Toast.error(t('settings.toastWorkingHoursIncomplete'));
       return;
     }
     if (nullOrEmpty(sqlitePath)) {
-      Toast.error('SQLite db path cannot be empty.');
+      Toast.error(t('settings.toastSqlitePathEmpty'));
       return;
     }
     try {
       await xhrPost('/api/admin/generalSettings', {
         interval,
+        proxyUrl: proxyUrl?.trim() ?? '',
         port,
         workingHours: {
           from: workingHourFrom,
@@ -119,17 +161,18 @@ const GeneralSettings = function GeneralSettings() {
         demoMode,
         analyticsEnabled,
         sqlitepath: sqlitePath,
+        baseUrl,
       });
     } catch (exception) {
       console.error(exception);
       if (exception?.json?.message != null) {
         Toast.error(exception.json.message);
       } else {
-        Toast.error('Error while trying to store settings.');
+        Toast.error(t('settings.toastSaveError'));
       }
       return;
     }
-    Toast.success('Settings stored successfully. We will reload your browser in 3 seconds.');
+    Toast.success(t('settings.toastSavedReloading'));
     setTimeout(() => {
       location.reload();
     }, 3000);
@@ -140,7 +183,7 @@ const GeneralSettings = function GeneralSettings() {
       await downloadBackupZip();
     } catch (e) {
       console.error(e);
-      Toast.error('Unexpected error while downloading backup.');
+      Toast.error(t('settings.backupDownloadError'));
     }
   }, []);
 
@@ -151,7 +194,7 @@ const GeneralSettings = function GeneralSettings() {
       setRestoreModalVisible(true);
     } catch (e) {
       console.error(e);
-      Toast.error('Failed to analyze backup.');
+      Toast.error(t('settings.backupAnalyzeError'));
     }
   }, []);
 
@@ -160,10 +203,10 @@ const GeneralSettings = function GeneralSettings() {
       try {
         setRestoreBusy(true);
         await clientRestore(selectedRestoreFile, force);
-        Toast.success('Restore completed. Please restart the Fredy backend now!');
+        Toast.success(t('settings.backupRestoreCompleted'));
       } catch (e) {
         console.error(e);
-        Toast.error(e?.message || 'Unexpected error while restoring backup.');
+        Toast.error(e?.message || t('settings.backupRestoreError'));
       } finally {
         setRestoreBusy(false);
       }
@@ -177,7 +220,6 @@ const GeneralSettings = function GeneralSettings() {
       if (!file) return;
       setSelectedRestoreFile(file);
       await precheckRestore(file);
-      // reset the input to allow same file re-select
       ev.target.value = '';
     },
     [precheckRestore],
@@ -189,187 +231,358 @@ const GeneralSettings = function GeneralSettings() {
     }
   }, []);
 
+  const handleSaveUserSettings = async () => {
+    try {
+      const responseJson = await actions.userSettings.setHomeAddress(address);
+      setCoords(responseJson.coords);
+      await actions.userSettings.setListingDeletionPreference({
+        skipPrompt: listingDeleteSkipPrompt,
+        hardDelete: listingDeleteHard,
+      });
+      await actions.userSettings.getUserSettings();
+      Toast.success(t('settings.userSettingsSaved'));
+    } catch (error) {
+      Toast.error(error.json?.error || t('settings.userSettingsSaveError'));
+    }
+  };
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value) => {
+        xhrGet(`/api/user/settings/autocomplete?q=${encodeURIComponent(value)}`)
+          .then((response) => {
+            if (response.status === 200) {
+              setDataSource(response.json);
+            }
+          })
+          .catch(() => {});
+      }, 300),
+    [],
+  );
+
+  const searchAddress = (value) => {
+    if (!value) {
+      setDataSource([]);
+      return;
+    }
+    debouncedSearch(value);
+  };
+
   return (
-    <div>
+    <div className="generalSettings">
+      <Headline text={t('settings.title')} />
       {!loading && (
-        <React.Fragment>
-          <div>
-            <SegmentPart
-              name="Interval"
-              helpText="Interval in minutes for running queries against the configured services. Do NOT go under 5 minutes as with a lower interval, your instance might be detected as a bot."
-              Icon={IconRefresh}
+        <>
+          <Tabs type="line">
+            <TabPane
+              tab={
+                <span>
+                  <IconSignal size="small" style={{ marginRight: 6 }} />
+                  {t('settings.tabSystem')}
+                </span>
+              }
+              itemKey="system"
             >
-              <InputNumber
-                min={5}
-                max={1440}
-                placeholder="Interval in minutes"
-                value={interval}
-                formatter={(value) => `${value}`.replace(/\D/g, '')}
-                onChange={(value) => setInterval(value)}
-                suffix={'minutes'}
-              />
-            </SegmentPart>
-            <Divider margin="1rem" />
-            <SegmentPart
-              name="Backup & Restore"
-              helpText="Download a zipped backup of your database or restore it from a backup zip."
-              Icon={IconSave}
-            >
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
-                <Button theme="solid" icon={<IconSave />} onClick={handleDownloadBackup}>
-                  Download backup
-                </Button>
-                <input
-                  type="file"
-                  accept=".zip,application/zip"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  onChange={handleSelectRestoreFile}
-                />
-                <Button onClick={handleOpenFilePicker} theme="light" icon={<IconFolder />}>
-                  Restore from zip
-                </Button>
+              <div className="generalSettings__tab-content">
+                <SegmentPart name={t('settings.port')} helpText={t('settings.portHelp')}>
+                  <InputNumber
+                    min={0}
+                    max={99999}
+                    placeholder={t('settings.portPlaceholder')}
+                    value={port}
+                    formatter={(value) => `${value}`.replace(/\D/g, '')}
+                    onChange={(value) => setPort(value)}
+                    style={{ maxWidth: 160 }}
+                  />
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.baseUrl')} helpText={t('settings.baseUrlHelp')}>
+                  <Input
+                    type="text"
+                    placeholder={t('settings.baseUrlPlaceholder')}
+                    value={baseUrl}
+                    onChange={(value) => setBaseUrl(value)}
+                  />
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.sqlitePath')} helpText={t('settings.sqlitePathHelp')}>
+                  <Banner
+                    fullMode={false}
+                    type="warning"
+                    closeIcon={null}
+                    style={{ marginBottom: '12px' }}
+                    description={t('settings.sqlitePathWarning')}
+                  />
+                  <Input
+                    type="text"
+                    placeholder={t('settings.sqlitePathPlaceholder')}
+                    value={sqlitePath}
+                    onChange={(value) => setSqlitePath(value)}
+                  />
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.analytics')} helpText={t('settings.analyticsHelp')}>
+                  <Checkbox checked={analyticsEnabled} onChange={(e) => setAnalyticsEnabled(e.target.checked)}>
+                    {t('settings.analyticsEnable')}
+                  </Checkbox>
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.demoMode')} helpText={t('settings.demoModeHelp')}>
+                  <Checkbox checked={demoMode} onChange={(e) => setDemoMode(e.target.checked)}>
+                    {t('settings.demoModeEnable')}
+                  </Checkbox>
+                </SegmentPart>
+
+                <div className="generalSettings__save-row">
+                  <Button type="primary" theme="solid" onClick={handleStore} icon={<IconSave />}>
+                    {t('settings.save')}
+                  </Button>
+                </div>
               </div>
-            </SegmentPart>
-            <Divider margin="1rem" />
-            <SegmentPart name="Port" helpText="Port on which Fredy is running." Icon={IconSignal}>
-              <InputNumber
-                min={0}
-                max={99999}
-                placeholder="Port"
-                value={port}
-                formatter={(value) => `${value}`.replace(/\D/g, '')}
-                onChange={(value) => setPort(value)}
-              />
-            </SegmentPart>
-            <Divider margin="1rem" />
-            <SegmentPart
-              name="SQLite Database path"
-              helpText="The directory where Fredy stores its SQLite database files."
-              Icon={IconFolder}
-            >
-              <Banner
-                fullMode={false}
-                type="warning"
-                closeIcon={null}
-                title={<div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>Warning</div>}
-                style={{ marginBottom: '1rem' }}
-                description={
-                  <div>
-                    Changing the path later may result in data loss.
-                    <br />
-                    You <b>must</b> restart Fredy immediately after changing this setting!
-                  </div>
-                }
-              />
+            </TabPane>
 
-              <Input
-                type="text"
-                placeholder="Select folder"
-                value={sqlitePath}
-                onChange={(value) => {
-                  setSqlitePath(value);
-                }}
-              />
-            </SegmentPart>
-            <Divider margin="1rem" />
-            <SegmentPart
-              name="Working hours"
-              helpText="During these hours, Fredy will search for new apartments. If nothing is configured, Fredy will search around the clock."
-              Icon={IconCalendar}
+            <TabPane
+              tab={
+                <span>
+                  <IconRefresh size="small" style={{ marginRight: 6 }} />
+                  {t('settings.tabExecution')}
+                </span>
+              }
+              itemKey="execution"
             >
-              <div className="generalSettings__timePickerContainer">
-                <TimePicker
-                  format={'HH:mm'}
-                  insetLabel="From"
-                  value={formatFromTBackend(workingHourFrom)}
-                  placeholder=""
-                  onChange={(val) => {
-                    setWorkingHourFrom(val == null ? null : formatFromTimestamp(val));
-                  }}
-                />
-                <TimePicker
-                  format={'HH:mm'}
-                  insetLabel="Until"
-                  value={formatFromTBackend(workingHourTo)}
-                  placeholder=""
-                  onChange={(val) => {
-                    setWorkingHourTo(val == null ? null : formatFromTimestamp(val));
-                  }}
-                />
+              <div className="generalSettings__tab-content">
+                <SegmentPart name={t('settings.searchInterval')} helpText={t('settings.searchIntervalHelp')}>
+                  <InputNumber
+                    min={5}
+                    max={1440}
+                    placeholder={t('settings.searchIntervalPlaceholder')}
+                    value={interval}
+                    formatter={(value) => `${value}`.replace(/\D/g, '')}
+                    onChange={(value) => setInterval(value)}
+                    suffix={t('settings.searchIntervalSuffix')}
+                    style={{ maxWidth: 200 }}
+                  />
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.workingHours')} helpText={t('settings.workingHoursHelp')}>
+                  <div className="generalSettings__timePickerContainer">
+                    <TimePicker
+                      format={'HH:mm'}
+                      insetLabel={t('settings.workingHoursFrom')}
+                      value={formatFromTBackend(workingHourFrom)}
+                      placeholder=""
+                      onChange={(val) => {
+                        setWorkingHourFrom(val == null ? null : formatFromTimestamp(val));
+                      }}
+                    />
+                    <TimePicker
+                      format={'HH:mm'}
+                      insetLabel={t('settings.workingHoursUntil')}
+                      value={formatFromTBackend(workingHourTo)}
+                      placeholder=""
+                      onChange={(val) => {
+                        setWorkingHourTo(val == null ? null : formatFromTimestamp(val));
+                      }}
+                    />
+                  </div>
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.proxyUrl')} helpText={t('settings.proxyUrlHelp')}>
+                  <Input
+                    type="text"
+                    placeholder={t('settings.proxyUrlPlaceholder')}
+                    value={proxyUrl}
+                    onChange={(value) => setProxyUrl(value)}
+                  />
+                </SegmentPart>
+
+                <div className="generalSettings__save-row">
+                  <Button type="primary" theme="solid" onClick={handleStore} icon={<IconSave />}>
+                    {t('settings.save')}
+                  </Button>
+                </div>
               </div>
-            </SegmentPart>
-            <Divider margin="1rem" />
+            </TabPane>
 
-            <SegmentPart name="Analytics" helpText="Insights into the usage of Fredy." Icon={IconLineChartStroked}>
-              <Banner
-                fullMode={false}
-                type="info"
-                closeIcon={null}
-                title={<div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>Explanation</div>}
-                style={{ marginBottom: '1rem' }}
-                description={
-                  <div>
-                    Analytics are disabled by default. If you choose to enable them, we will begin tracking the
-                    following:
-                    <br />
-                    <ul>
-                      <li>Name of active provider (e.g. Immoscout)</li>
-                      <li>Name of active adapter (e.g. Console)</li>
-                      <li>language</li>
-                      <li>os</li>
-                      <li>node version</li>
-                      <li>arch</li>
-                    </ul>
-                    The data is sent anonymously and helps me understand which providers or adapters are being used the
-                    most. In the end it helps me to improve fredy.
+            <TabPane
+              tab={
+                <span>
+                  <IconHome size="small" style={{ marginRight: 6 }} />
+                  {t('settings.tabUserSettings')}
+                </span>
+              }
+              itemKey="userSettings"
+            >
+              <div className="generalSettings__tab-content">
+                <SegmentPart name={t('settings.language')} helpText={t('settings.languageHelp')}>
+                  <Select
+                    style={{ width: 240 }}
+                    value={language ?? 'en'}
+                    disabled={savingLanguage}
+                    optionList={availableLanguages.map((lang) => ({
+                      label: `${lang.flag} ${lang.name}`,
+                      value: lang.code,
+                    }))}
+                    onChange={async (code) => {
+                      try {
+                        await actions.userSettings.setLanguage(code);
+                      } catch {
+                        Toast.error(t('settings.languageSaveError'));
+                      }
+                    }}
+                  />
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.homeAddress')} helpText={t('settings.homeAddressHelp')}>
+                  <AutoComplete
+                    data={dataSource}
+                    value={address}
+                    showClear
+                    onChange={(v) => setAddress(v)}
+                    onSearch={searchAddress}
+                    placeholder={t('settings.homeAddressPlaceholder')}
+                    style={{ width: '100%' }}
+                  />
+                  {coords && coords.lat === -1 && (
+                    <Banner
+                      type="danger"
+                      description={t('settings.homeAddressGeoError')}
+                      closeIcon={null}
+                      style={{ marginTop: 8 }}
+                    />
+                  )}
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.providerDetails')} helpText={t('settings.providerDetailsHelp')}>
+                  <Banner
+                    type="warning"
+                    description={t('settings.providerDetailsWarning')}
+                    closeIcon={null}
+                    style={{ marginBottom: 12 }}
+                  />
+                  <Select
+                    multiple
+                    style={{ width: '100%' }}
+                    value={Array.isArray(providerDetails) ? providerDetails : []}
+                    optionList={(allProviders ?? []).map((p) => ({ label: p.name, value: p.id }))}
+                    placeholder={t('settings.providerDetailsPlaceholder')}
+                    onChange={async (selected) => {
+                      try {
+                        await actions.userSettings.setProviderDetails(selected);
+                        Toast.success(t('settings.providerDetailsUpdated'));
+                      } catch {
+                        Toast.error(t('settings.providerDetailsUpdateError'));
+                      }
+                    }}
+                  />
+                </SegmentPart>
+
+                <SegmentPart name={t('settings.listingDeletion')} helpText={t('settings.listingDeletionHelp')}>
+                  <RadioGroup
+                    value={listingDeleteHard ? 'hard' : 'soft'}
+                    onChange={(e) => setListingDeleteHard(e.target.value === 'hard')}
+                  >
+                    <Radio value="soft">
+                      <div>
+                        <Text strong>{t('settings.listingDeletionSoftLabel')}</Text>
+                        <br />
+                        <Text type="secondary">{t('settings.listingDeletionSoftDesc')}</Text>
+                      </div>
+                    </Radio>
+                    <Radio value="hard">
+                      <div>
+                        <Text strong>{t('settings.listingDeletionHardLabel')}</Text>
+                        <br />
+                        <Text type="secondary">
+                          {t('settings.listingDeletionHardDesc')}
+                          <br />
+                          <Text type="warning">{t('settings.listingDeletionHardConsequence')}</Text>
+                        </Text>
+                      </div>
+                    </Radio>
+                  </RadioGroup>
+                  <Checkbox
+                    checked={listingDeleteSkipPrompt}
+                    onChange={(e) => setListingDeleteSkipPrompt(e.target.checked)}
+                    style={{ marginTop: 12 }}
+                  >
+                    {t('settings.listingDeletionSkipPrompt')}
+                  </Checkbox>
+                </SegmentPart>
+
+                <div className="generalSettings__save-row">
+                  <Button
+                    icon={<IconSave />}
+                    theme="solid"
+                    type="primary"
+                    onClick={handleSaveUserSettings}
+                    loading={saving}
+                  >
+                    {t('settings.save')}
+                  </Button>
+                </div>
+              </div>
+            </TabPane>
+
+            <TabPane
+              tab={
+                <span>
+                  <IconFolder size="small" style={{ marginRight: 6 }} />
+                  {t('settings.tabBackup')}
+                </span>
+              }
+              itemKey="backup"
+            >
+              <div className="generalSettings__tab-content">
+                {demoMode && !currentUser?.isAdmin && (
+                  <Banner
+                    fullMode={false}
+                    type="warning"
+                    closeIcon={null}
+                    style={{ marginBottom: '12px' }}
+                    description={t('settings.backupDemoWarning')}
+                  />
+                )}
+                <SegmentPart name={t('settings.backupSectionName')} helpText={t('settings.backupHelp')}>
+                  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Button
+                      theme="solid"
+                      icon={<IconSave />}
+                      onClick={handleDownloadBackup}
+                      disabled={demoMode && !currentUser?.isAdmin}
+                    >
+                      {t('settings.backupDownload')}
+                    </Button>
+                    <input
+                      type="file"
+                      accept=".zip,application/zip"
+                      ref={fileInputRef}
+                      style={{ display: 'none' }}
+                      onChange={handleSelectRestoreFile}
+                    />
+                    <Button
+                      onClick={handleOpenFilePicker}
+                      theme="light"
+                      icon={<IconFolder />}
+                      disabled={demoMode && !currentUser?.isAdmin}
+                    >
+                      {t('settings.backupRestoreFromZip')}
+                    </Button>
                   </div>
-                }
-              />
-
-              <Checkbox checked={analyticsEnabled} onChange={(e) => setAnalyticsEnabled(e.target.checked)}>
-                {' '}
-                Enabled
-              </Checkbox>
-            </SegmentPart>
-
-            <Divider margin="1rem" />
-
-            <SegmentPart name="Demo Mode" helpText="If enabled, Fredy runs in demo mode." Icon={IconSearch}>
-              <Banner
-                fullMode={false}
-                type="info"
-                closeIcon={null}
-                title={<div style={{ fontWeight: 600, fontSize: '14px', lineHeight: '20px' }}>Explanation</div>}
-                style={{ marginBottom: '1rem' }}
-                description={
-                  <div>
-                    In demo mode, Fredy will not (really) search for any real estates. Fredy is in a lockdown mode. Also
-                    all database files will be set back to the default values at midnight.
-                  </div>
-                }
-              />
-
-              <Checkbox checked={demoMode} onChange={(e) => setDemoMode(e.target.checked)}>
-                {' '}
-                Enabled
-              </Checkbox>
-            </SegmentPart>
-
-            <Divider margin="1rem" />
-            <Button type="primary" theme="solid" onClick={handleStore} icon={<IconSave />}>
-              Save
-            </Button>
-          </div>
-        </React.Fragment>
+                </SegmentPart>
+              </div>
+            </TabPane>
+          </Tabs>
+        </>
       )}
+
       {restoreModalVisible && (
         <Modal
-          title="Restore database"
+          title={t('settings.restoreModalTitle')}
           visible={restoreModalVisible}
           onCancel={() => setRestoreModalVisible(false)}
           onOk={() => performRestore(!precheckInfo?.compatible)}
-          okText={precheckInfo?.compatible ? 'Restore now' : 'Restore anyway'}
+          okText={precheckInfo?.compatible ? t('settings.restoreNow') : t('settings.restoreAnyway')}
           okType={precheckInfo?.compatible ? 'primary' : 'danger'}
           confirmLoading={restoreBusy}
         >
@@ -378,7 +591,7 @@ const GeneralSettings = function GeneralSettings() {
               type="danger"
               fullMode={false}
               closeIcon={null}
-              title={<div style={{ fontWeight: 600, fontSize: '14px' }}>Problem detected</div>}
+              title={<div style={{ fontWeight: 600, fontSize: '14px' }}>{t('settings.restoreProblemDetected')}</div>}
               description={<div>{precheckInfo?.message}</div>}
             />
           )}
@@ -387,7 +600,7 @@ const GeneralSettings = function GeneralSettings() {
               type="warning"
               fullMode={false}
               closeIcon={null}
-              title={<div style={{ fontWeight: 600, fontSize: '14px' }}>Automatic migrations will be applied</div>}
+              title={<div style={{ fontWeight: 600, fontSize: '14px' }}>{t('settings.restoreMigrationsApplied')}</div>}
               description={<div>{precheckInfo?.message}</div>}
             />
           )}
@@ -396,13 +609,15 @@ const GeneralSettings = function GeneralSettings() {
               type="success"
               fullMode={false}
               closeIcon={null}
-              title={<div style={{ fontWeight: 600, fontSize: '14px' }}>Backup is compatible</div>}
+              title={<div style={{ fontWeight: 600, fontSize: '14px' }}>{t('settings.restoreCompatible')}</div>}
               description={<div>{precheckInfo?.message}</div>}
             />
           )}
           <div style={{ marginTop: '0.5rem', fontSize: '12px', color: 'var(--semi-color-text-2)' }}>
-            Backup migration: {precheckInfo?.backupMigration ?? 'unknown'} | Required migration:{' '}
-            {precheckInfo?.requiredMigration ?? 'unknown'}
+            {t('settings.restoreMigrationInfo', {
+              backupMigration: precheckInfo?.backupMigration ?? 'unknown',
+              requiredMigration: precheckInfo?.requiredMigration ?? 'unknown',
+            })}
           </div>
         </Modal>
       )}

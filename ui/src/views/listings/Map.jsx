@@ -3,87 +3,99 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { parseBoolean, parseNumber, parseString, useSearchParamState } from '../../hooks/useSearchParamState.js';
+import { renderToString } from 'react-dom/server';
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { useSelector, useActions } from '../../services/state/store.js';
-import { Select, Space, Typography, Button, Popover, Divider, Switch, Banner } from '@douyinfe/semi-ui';
-import { IconFilter } from '@douyinfe/semi-icons';
-import no_image from '../../assets/no_image.jpg';
-import RangeSlider from 'react-range-slider-input';
+import { useActions, useSelector } from '../../services/state/store.js';
+import { distanceMeters, generateCircleCoords, getBoundsFromCenter, getBoundsFromCoords } from './mapUtils.js';
+import { Banner, Select, Switch, Toast, Typography } from '@douyinfe/semi-ui-19';
+import { IconDelete, IconEyeOpened, IconLink } from '@douyinfe/semi-icons';
+
+import no_image from '../../assets/no_image.png';
+import _RangeSlider from 'react-range-slider-input';
 import 'react-range-slider-input/dist/style.css';
 import './Map.less';
+import { xhrDelete } from '../../services/xhr.js';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
+import Map from '../../components/map/Map.jsx';
+import Headline from '../../components/headline/Headline.jsx';
+import { useTranslation } from '../../services/i18n/i18n.jsx';
+
+const RangeSlider = _RangeSlider?.default ?? _RangeSlider;
 
 const { Text } = Typography;
 
-const GERMANY_BOUNDS = [
-  [5.866, 47.27], // Southwest coordinates
-  [15.042, 55.059], // Northeast coordinates
-];
-
-const STYLES = {
-  STANDARD: 'https://tiles.openfreemap.org/styles/bright',
-  SATELLITE: {
-    version: 8,
-    sources: {
-      'satellite-tiles': {
-        type: 'raster',
-        tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-        tileSize: 256,
-        attribution:
-          'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      },
-      'satellite-labels': {
-        type: 'raster',
-        tiles: [
-          'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-        ],
-        tileSize: 256,
-        attribution: '© Esri',
-      },
-    },
-    layers: [
-      {
-        id: 'satellite-tiles',
-        type: 'raster',
-        source: 'satellite-tiles',
-        minzoom: 0,
-        maxzoom: 19,
-      },
-      {
-        id: 'satellite-labels',
-        type: 'raster',
-        source: 'satellite-labels',
-        minzoom: 0,
-        maxzoom: 19,
-      },
-    ],
-  },
-};
-
 export default function MapView() {
+  const t = useTranslation();
   const mapContainer = useRef(null);
   const map = useRef(null);
   const markers = useRef([]);
+  const homeMarker = useRef(null);
   const actions = useActions();
+  const navigate = useNavigate();
+  const sp = useSearchParams();
+  const [searchParams, setSearchParams] = sp;
   const listings = useSelector((state) => state.listingsData.mapListings);
-  const [style, setStyle] = useState('STANDARD');
-  const [show3dBuildings, setShow3dBuildings] = useState(false);
+  const userSettings = useSelector((state) => state.userSettings.settings);
+  const homeAddress = userSettings?.home_address;
+  const listingDeletionPref = userSettings?.listing_deletion_preference;
+  const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
 
   const jobs = useSelector((state) => state.jobsData.jobs);
-  const [jobId, setJobId] = useState(null);
-  const [priceRange, setPriceRange] = useState([0, 0]);
-  const [showFilterBar, setShowFilterBar] = useState(false);
+  const [jobId, setJobId] = useSearchParamState(sp, 'job', null, parseString);
+  const [distanceFilter, setDistanceFilter] = useSearchParamState(sp, 'distance', 0, parseNumber);
+  const [style] = useSearchParamState(sp, 'style', 'STANDARD', parseString);
+  const [show3dBuildings, setShow3dBuildings] = useSearchParamState(sp, 'buildings', false, parseBoolean);
+
+  // Price range: stored as priceMin/priceMax URL params; default max derived from loaded listings
+  const urlPriceMin = searchParams.has('priceMin') ? Number(searchParams.get('priceMin')) : null;
+  const urlPriceMax = searchParams.has('priceMax') ? Number(searchParams.get('priceMax')) : null;
+  const [priceRange, setPriceRange] = useState([urlPriceMin ?? 0, urlPriceMax ?? 0]);
+
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [listingToDelete, setListingToDelete] = useState(null);
+  const deleteListingRef = useRef(null);
+
+  const confirmListingDeletion = async (hardDelete, remember, id = listingToDelete) => {
+    try {
+      if (remember) {
+        await actions.userSettings.setListingDeletionPreference({ skipPrompt: true, hardDelete });
+      }
+      await xhrDelete('/api/listings/', { ids: [id], hardDelete });
+      Toast.success(t('map.toastDeleted'));
+      fetchListings();
+    } catch (error) {
+      Toast.error(error.message || t('map.toastDeleteError'));
+    } finally {
+      setDeleteModalVisible(false);
+      setListingToDelete(null);
+    }
+  };
+
+  deleteListingRef.current = (id) => {
+    if (listingDeletionPref?.skipPrompt) {
+      confirmListingDeletion(listingDeletionPref.hardDelete, false, id);
+      return;
+    }
+    setListingToDelete(id);
+    setDeleteModalVisible(true);
+  };
 
   useEffect(() => {
-    setPriceRange([0, getMaxPrice()]);
+    // Only reset to full range when no URL override is set
+    if (urlPriceMax === null) {
+      setPriceRange([0, getMaxPrice()]);
+    }
   }, [listings]);
 
   const getMaxPrice = () => {
-    return listings.reduce((max, item) => {
+    return listings.reduce((acc, item) => {
       const price = Number(item.price);
-      return Number.isFinite(price) && price > max ? price : max;
-    }, -Infinity);
+      return Number.isFinite(price) && price > acc ? price : acc;
+    }, 0);
   };
 
   const filterListings = () => {
@@ -94,125 +106,74 @@ export default function MapView() {
   };
 
   useEffect(() => {
-    if (map.current) return;
+    window.deleteListing = (id) => deleteListingRef.current(id);
 
-    map.current = new maplibregl.Map({
-      container: mapContainer.current,
-      style: STYLES[style],
-      center: [10.4515, 51.1657], // Center of Germany
-      zoom: 4,
-      maxBounds: GERMANY_BOUNDS,
-      antialias: true,
-    });
-
-    map.current.addControl(
-      new maplibregl.NavigationControl({
-        showCompass: true,
-        visualizePitch: true,
-        visualizeRoll: true,
-      }),
-      'top-right',
-    );
-
-    map.current.addControl(
-      new maplibregl.GeolocateControl({
-        positionOptions: {
-          enableHighAccuracy: true,
-        },
-        trackUserLocation: true,
-      }),
-    );
+    window.viewDetails = (id) => {
+      navigate(`/listings/listing/${id}`);
+    };
 
     return () => {
-      map.current.remove();
+      delete window.deleteListing;
+      delete window.viewDetails;
     };
+  }, [navigate]);
+
+  useEffect(() => {
+    if (mapContainer.current && !map.current) {
+      const checkMapReady = () => {
+        if (mapContainer.current?.map) {
+          map.current = mapContainer.current.map;
+        } else {
+          setTimeout(checkMapReady, 100);
+        }
+      };
+      checkMapReady();
+    }
   }, []);
 
-  useEffect(() => {
-    if (map.current) {
-      map.current.setStyle(STYLES[style]);
-    }
-  }, [style]);
+  const handleMapReady = (mapInstance) => {
+    map.current = mapInstance;
+  };
 
-  useEffect(() => {
-    if (show3dBuildings && style !== 'STANDARD') {
-      setStyle('STANDARD');
-    }
-  }, [show3dBuildings, style]);
-
-  useEffect(() => {
-    if (!map.current) return;
-
-    map.current.setPitch(show3dBuildings ? 45 : 0);
-  }, [show3dBuildings]);
-
-  useEffect(() => {
-    if (!map.current) return;
-
-    const add3dLayer = () => {
-      if (show3dBuildings) {
-        if (!map.current.getSource('openfreemap')) {
-          map.current.addSource('openfreemap', {
-            type: 'vector',
-            url: 'https://tiles.openfreemap.org/planet',
-          });
+  const handleMapStyle = (value) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (value === 'STANDARD') {
+          next.delete('style');
+        } else {
+          next.set('style', value);
         }
-        if (!map.current.getLayer('3d-buildings')) {
-          const layers = map.current.getStyle().layers;
-          let labelLayerId;
-          for (let i = 0; i < layers.length; i++) {
-            if (layers[i].type === 'symbol' && layers[i].layout?.['text-field']) {
-              labelLayerId = layers[i].id;
-              break;
-            }
-          }
-          map.current.addLayer(
-            {
-              id: '3d-buildings',
-              source: 'openfreemap',
-              'source-layer': 'building',
-              type: 'fill-extrusion',
-              minzoom: 15,
-              filter: ['!=', ['get', 'hide_3d'], true],
-              paint: {
-                'fill-extrusion-color': [
-                  'interpolate',
-                  ['linear'],
-                  ['get', 'render_height'],
-                  0,
-                  'lightgray',
-                  200,
-                  'royalblue',
-                  400,
-                  'lightblue',
-                ],
-                'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 15, 0, 16, ['get', 'render_height']],
-                'fill-extrusion-base': ['case', ['>=', ['get', 'zoom'], 16], ['get', 'render_min_height'], 0],
-                'fill-extrusion-opacity': 0.6,
-              },
-            },
-            labelLayerId,
-          );
+        if (value === 'SATELLITE') {
+          next.delete('buildings');
         }
-      } else {
-        if (map.current.getLayer('3d-buildings')) {
-          map.current.removeLayer('3d-buildings');
+        return next;
+      },
+      { replace: true },
+    );
+  };
+
+  const handlePriceRange = (val) => {
+    const maxPrice = getMaxPrice();
+    if (maxPrice <= 0) return; // skip until listings are loaded
+    setPriceRange(val);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (val[0] === 0) {
+          next.delete('priceMin');
+        } else {
+          next.set('priceMin', String(val[0]));
         }
-      }
-    };
-
-    if (map.current.isStyleLoaded()) {
-      add3dLayer();
-    } else {
-      map.current.once('styledata', add3dLayer);
-    }
-  }, [show3dBuildings, style]);
-
-  const setMapStyle = (value) => {
-    setStyle(value);
-    if (value === 'SATELLITE') {
-      setShow3dBuildings(false);
-    }
+        if (val[1] === 0 || val[1] >= maxPrice) {
+          next.delete('priceMax');
+        } else {
+          next.set('priceMax', String(val[1]));
+        }
+        return next;
+      },
+      { replace: true },
+    );
   };
 
   const fetchListings = async () => {
@@ -228,8 +189,112 @@ export default function MapView() {
   useEffect(() => {
     if (!map.current) return;
 
+    if (homeAddress?.coords) {
+      if (distanceFilter > 0) {
+        const bounds = getBoundsFromCenter([homeAddress.coords.lng, homeAddress.coords.lat], distanceFilter);
+
+        map.current.fitBounds(bounds, {
+          padding: 20,
+          maxZoom: 15,
+          duration: 1000,
+        });
+      } else {
+        map.current.flyTo({
+          center: [homeAddress.coords.lng, homeAddress.coords.lat],
+          zoom: 12,
+          duration: 1000,
+        });
+      }
+    } else {
+      const filtered = filterListings();
+      const coords = filtered
+        .filter((l) => l.latitude != null && l.longitude != null && l.latitude !== -1 && l.longitude !== -1)
+        .map((l) => [l.longitude, l.latitude]);
+
+      if (coords.length > 0) {
+        const bounds = getBoundsFromCoords(coords);
+        map.current.fitBounds(bounds, {
+          padding: 50,
+          maxZoom: 15,
+          duration: 1000,
+        });
+      }
+    }
+  }, [homeAddress?.address, distanceFilter, listings]);
+
+  useEffect(() => {
+    if (!map.current) return;
+
     markers.current.forEach((marker) => marker.remove());
     markers.current = [];
+
+    if (homeMarker.current) {
+      homeMarker.current.remove();
+      homeMarker.current = null;
+    }
+
+    if (homeAddress?.coords) {
+      homeMarker.current = new maplibregl.Marker({ color: 'red' })
+        .setLngLat([homeAddress.coords.lng, homeAddress.coords.lat])
+        .setPopup(
+          new maplibregl.Popup({ offset: 25 }).setHTML(
+            `<div class="map-popup-content"><h4>${t('map.popupHomeAddress')}</h4><p>${homeAddress.address}</p></div>`,
+          ),
+        )
+        .addTo(map.current);
+    }
+
+    const addCircleLayer = () => {
+      if (!map.current || !map.current.isStyleLoaded()) return;
+      if (map.current.getLayer('distance-circle')) map.current.removeLayer('distance-circle');
+      if (map.current.getLayer('distance-circle-outline')) map.current.removeLayer('distance-circle-outline');
+      if (map.current.getSource('distance-circle-source')) map.current.removeSource('distance-circle-source');
+
+      if (distanceFilter > 0 && homeAddress?.coords) {
+        const ret = generateCircleCoords([homeAddress.coords.lng, homeAddress.coords.lat], distanceFilter);
+
+        map.current.addSource('distance-circle-source', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            geometry: {
+              type: 'Polygon',
+              coordinates: [ret],
+            },
+          },
+        });
+
+        map.current.addLayer({
+          id: 'distance-circle',
+          type: 'fill',
+          source: 'distance-circle-source',
+          paint: {
+            'fill-color': '#90EE90',
+            'fill-opacity': 0.3,
+          },
+        });
+
+        map.current.addLayer({
+          id: 'distance-circle-outline',
+          type: 'line',
+          source: 'distance-circle-source',
+          paint: {
+            'line-color': '#006400',
+            'line-width': 1,
+          },
+        });
+      }
+    };
+
+    const updateLayers = () => {
+      addCircleLayer();
+    };
+
+    if (map.current.isStyleLoaded()) {
+      updateLayers();
+    } else {
+      map.current.on('load', updateLayers);
+    }
 
     filterListings().forEach((listing) => {
       if (
@@ -242,21 +307,59 @@ export default function MapView() {
           ? listing.provider.charAt(0).toUpperCase() + listing.provider.slice(1)
           : 'N/A';
 
-        const popup = new maplibregl.Popup({ offset: 25 }).setHTML(
-          `<div class="map-popup-content">
-            <img src="${listing.image_url || no_image}" alt="${listing.title}" />
+        const popupContent = `
+          <div class="map-popup-content">
+            <img
+              src="${listing.image_url}"
+              onerror="this.onerror=null;this.src='${no_image}'"
+            />
             <h4>${listing.title}</h4>
             <div class="info">
-              <span><strong>Price:</strong> ${listing.price ? listing.price + ' €' : 'N/A'}</span>
-              <span><strong>Address:</strong> ${listing.address || 'N/A'}</span>
-              <span><strong>Job:</strong> ${listing.job_name || 'N/A'}</span>
-              <span><strong>Provider:</strong> ${capitalizedProvider}</span>
-              <a href="${listing.link}" target="_blank" rel="noopener noreferrer">View Listing</a>
+              <span><strong>${t('map.popupPrice')}</strong> ${listing.price ? listing.price + ' €' : t('common.na')}</span>
+              <span><strong>${t('map.popupAddress')}</strong> ${listing.address || t('common.na')}</span>
+              <span><strong>${t('map.popupJob')}</strong> ${listing.job_name || t('common.na')}</span>
+              <span><strong>${t('map.popupProvider')}</strong> ${capitalizedProvider}</span>
+              <span><strong>${t('map.popupSize')}</strong> ${listing.size != null ? `${listing.size} m²` : t('common.na')}</span>
+              <div style="display: flex; gap: 8px; margin-top: 8px; justify-content: space-between;">
+                <div class="map-popup-content__linkButton">
+                  <a href="${listing.link}" target="_blank" rel="noopener noreferrer">
+                    ${renderToString(<IconLink />)}
+                  </a>
+                </div>
+                <button
+                  class="map-popup-content__detailsButton"
+                  title="${t('map.popupViewDetails')}"
+                  onclick="viewDetails('${listing.id}')"
+                >
+                  ${renderToString(<IconEyeOpened />)}
+                </button>
+                <button
+                  class="map-popup-content__deleteButton"
+                  title="${t('map.popupRemove')}"
+                  onclick="deleteListing('${listing.id}')"
+                >
+                  ${renderToString(<IconDelete />)}
+                </button>
+              </div>
             </div>
-          </div>`,
-        );
+          </div>`;
 
-        const marker = new maplibregl.Marker()
+        const popup = new maplibregl.Popup({ offset: 25 }).setHTML(popupContent);
+
+        let color = '#3FB1CE';
+        if (distanceFilter > 0 && homeAddress?.coords) {
+          const dist = distanceMeters(
+            homeAddress.coords.lat,
+            homeAddress.coords.lng,
+            listing.latitude,
+            listing.longitude,
+          );
+          if (dist <= distanceFilter * 1000) {
+            color = 'orange';
+          }
+        }
+
+        const marker = new maplibregl.Marker({ color })
           .setLngLat([listing.longitude, listing.latitude])
           .setPopup(popup)
           .addTo(map.current);
@@ -264,92 +367,135 @@ export default function MapView() {
         markers.current.push(marker);
       }
     });
-  }, [listings, priceRange]);
+  }, [listings, priceRange, homeAddress, distanceFilter]);
 
   return (
-    <div className="map-view-container">
-      <div className="listingsGrid__searchbar map-filter-bar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexGrow: 1 }}>
-          <Text strong>Map View</Text>
-          <Select placeholder="Style" style={{ width: 120 }} value={style} onChange={(val) => setMapStyle(val)}>
-            <Select.Option value="STANDARD">Standard</Select.Option>
-            <Select.Option value="SATELLITE">Satellite</Select.Option>
-          </Select>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem' }}>
-            <Text strong>3D Buildings</Text>
-            <Switch size="small" checked={show3dBuildings} onChange={(v) => setShow3dBuildings(v)} />
+    <>
+      <Headline text={t('map.title')} />
+      <div className="map-view-container">
+        {!homeAddress && (
+          <Banner
+            fullMode={true}
+            type="warning"
+            bordered
+            closeIcon={null}
+            style={{ marginBottom: '8px' }}
+            description={
+              <span>
+                {t('map.noHomeAddressBefore')}
+                <Link to="/userSettings">{t('map.noHomeAddressLink')}</Link>
+                {t('map.noHomeAddressAfter')}
+              </span>
+            }
+          />
+        )}
+
+        <Banner
+          fullMode={true}
+          type="info"
+          bordered
+          closeIcon={null}
+          style={{ marginBottom: '8px' }}
+          description={t('map.onlyValidAddresses')}
+        />
+
+        <div className="map-view-container__map-wrapper">
+          <Map
+            mapContainerRef={mapContainer}
+            style={style}
+            show3dBuildings={show3dBuildings}
+            onMapReady={handleMapReady}
+          />
+
+          {/* Floating filter panel */}
+          <div className="map-view-container__floating-panel">
+            <div className="map-view-container__panel-row">
+              <Text size="small" strong style={{ color: '#8892a4' }}>
+                {t('map.filterJobLabel')}
+              </Text>
+              <Select
+                placeholder={t('map.filterJobPlaceholder')}
+                showClear
+                size="small"
+                onChange={(val) => setJobId(val)}
+                value={jobId}
+                style={{ width: 160 }}
+              >
+                {jobs?.map((j) => (
+                  <Select.Option key={j.id} value={j.id}>
+                    {j.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="map-view-container__panel-row">
+              <Text size="small" strong style={{ color: '#8892a4' }}>
+                {t('map.filterDistanceLabel')}
+              </Text>
+              <Select
+                placeholder={t('map.filterDistanceNone')}
+                size="small"
+                onChange={(val) => setDistanceFilter(val)}
+                value={distanceFilter}
+                style={{ width: 100 }}
+              >
+                <Select.Option value={0}>{t('map.filterDistanceNone')}</Select.Option>
+                <Select.Option value={5}>5 km</Select.Option>
+                <Select.Option value={10}>10 km</Select.Option>
+                <Select.Option value={15}>15 km</Select.Option>
+                <Select.Option value={20}>20 km</Select.Option>
+                <Select.Option value={25}>25 km</Select.Option>
+              </Select>
+            </div>
+
+            <div className="map-view-container__panel-row">
+              <Text size="small" strong style={{ color: '#8892a4' }}>
+                {t('map.filterPriceLabel')}
+              </Text>
+              <div className="map-view-container__price-slider">
+                <div className="map__rangesliderLabels">
+                  <span>{priceRange[0]}</span>
+                  <span>{priceRange[1]}</span>
+                </div>
+                <RangeSlider min={0} max={getMaxPrice()} step={100} value={priceRange} onInput={handlePriceRange} />
+              </div>
+            </div>
+
+            <div className="map-view-container__panel-row">
+              <Text size="small" strong style={{ color: '#8892a4' }}>
+                {t('map.filterStyleLabel')}
+              </Text>
+              <Select size="small" value={style} onChange={(val) => handleMapStyle(val)} style={{ width: 110 }}>
+                <Select.Option value="STANDARD">{t('map.filterStyleStandard')}</Select.Option>
+                <Select.Option value="SATELLITE">{t('map.filterStyleSatellite')}</Select.Option>
+              </Select>
+            </div>
+
+            <div className="map-view-container__panel-row">
+              <Text size="small" strong style={{ color: '#8892a4' }}>
+                {t('map.filter3dBuildings')}
+              </Text>
+              <Switch
+                size="small"
+                checked={show3dBuildings}
+                onChange={(v) => setShow3dBuildings(v)}
+                disabled={style === 'SATELLITE'}
+              />
+            </div>
           </div>
         </div>
-        <Popover content="Filter Results" style={{ color: 'white', padding: '.5rem' }}>
-          <Button
-            icon={<IconFilter />}
-            onClick={() => {
-              setShowFilterBar(!showFilterBar);
-            }}
-          />
-        </Popover>
+
+        <ListingDeletionModal
+          visible={deleteModalVisible}
+          defaultDeleteType={defaultDeleteType}
+          onConfirm={confirmListingDeletion}
+          onCancel={() => {
+            setDeleteModalVisible(false);
+            setListingToDelete(null);
+          }}
+        />
       </div>
-
-      {showFilterBar && (
-        <div className="listingsGrid__toolbar">
-          <Space wrap style={{ marginBottom: '1rem' }}>
-            <div className="listingsGrid__toolbar__card">
-              <div>
-                <Text strong>Filter by:</Text>
-              </div>
-              <div style={{ display: 'flex', gap: '.3rem', alignItems: 'center' }}>
-                <Select
-                  placeholder="Job"
-                  showClear
-                  style={{ width: 150 }}
-                  onChange={(val) => {
-                    setJobId(val);
-                  }}
-                  value={jobId}
-                >
-                  {jobs?.map((j) => (
-                    <Select.Option key={j.id} value={j.id}>
-                      {j.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-            </div>
-            <Divider layout="vertical" />
-            <div className="listingsGrid__toolbar__card">
-              <div>
-                <Text strong>Price Range (€):</Text>
-              </div>
-              <div style={{ width: 250, padding: '0 10px' }}>
-                <div className="map__rangesliderLabels">
-                  <span>{priceRange[0]} €</span>
-                  <span>{priceRange[1]} €</span>
-                </div>
-                <RangeSlider
-                  min={0}
-                  max={getMaxPrice()}
-                  step={100}
-                  value={priceRange}
-                  onInput={(val) => {
-                    setPriceRange(val);
-                  }}
-                  tipFormatter={(val) => `${val} €`}
-                />
-              </div>
-            </div>
-          </Space>
-        </div>
-      )}
-
-      <Banner
-        fullMode={true}
-        type="info"
-        bordered
-        closeIcon={null}
-        description="Keep in mind, only listings with proper adresses are being shown on this map."
-      />
-
-      <div ref={mapContainer} className="map-container" />
-    </div>
+    </>
   );
 }

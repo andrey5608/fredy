@@ -3,22 +3,25 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React from 'react';
 import './FredyFooter.less';
 import { useSelector } from '../../services/state/store.js';
-import { Typography } from '@douyinfe/semi-ui';
+import { Layout } from '@douyinfe/semi-ui-19';
+import { useTranslation } from '../../services/i18n/i18n.jsx';
 
 export default function FredyFooter() {
-  const { Text } = Typography;
+  const t = useTranslation();
+  const { Footer } = Layout;
   const version = useSelector((state) => state.versionUpdate.versionUpdate);
+
   return (
-    <div className="fredyFooter">
-      <div className="fredyFooter__version">
-        <Text type="tertiary">Fredy V{version?.localFredyVersion || 'N/A'}</Text>
-      </div>
-      <div className="fredyFooter__copyRight">
-        <Text link={{ href: 'https://github.com/orangecoding', target: '_blank' }}>Made with ❤️</Text>
-      </div>
-    </div>
+    <Footer className="fredyFooter">
+      <span className="fredyFooter__version">Fredy v{version?.localFredyVersion || t('common.na')}</span>
+      <span className="fredyFooter__credit">
+        {t('footer.madeWith')}{' '}
+        <a href="https://github.com/orangecoding" target="_blank" rel="noreferrer">
+          Christian Kellner
+        </a>
+      </span>
+    </Footer>
   );
 }

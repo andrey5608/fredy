@@ -1,11 +1,35 @@
+@import '../../tokens.less';
+
 .dashboard {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+
+  &__section-label {
+    display: block;
+    font-size: @text-xs;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: @color-faint;
+    margin-bottom: 10px;
+    margin-top: 1.5rem;
+  }
+
   &__row {
-    margin-bottom: 1rem;
-    /* Ensure grid items wrap to next line on narrow screens */
+    margin-bottom: 8px;
     flex-wrap: wrap;
-    /* Vertical gap of 1rem between wrapped grid items (no px) */
-    .semi-col {
-      margin-bottom: 1rem;
-    }
+  }
+
+  &__pie-wrapper {
+    background: #23242a;
+    border: 1px solid #37404e;
+    border-radius: @radius-card;
+    padding: 28px;
+    max-height: 320px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
   }
 }

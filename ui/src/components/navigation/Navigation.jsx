@@ -3,8 +3,8 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React, { useEffect, useState } from 'react';
-import { Button, Nav } from '@douyinfe/semi-ui';
+import { useEffect, useState } from 'react';
+import { Nav } from '@douyinfe/semi-ui-19';
 import { IconStar, IconSetting, IconTerminal, IconHistogram, IconSidebar } from '@douyinfe/semi-icons';
 import logoWhite from '../../assets/logo_white.png';
 import heart from '../../assets/heart.png';
@@ -12,17 +12,17 @@ import Logout from '../logout/Logout.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import './Navigate.less';
-import { useFeature } from '../../hooks/featureHook.js';
 import { useScreenWidth } from '../../hooks/screenWidth.js';
 import { navigationSelectHandler } from './navigationLogic.js';
+import { useTranslation } from '../../services/i18n/i18n.jsx';
 
 export default function Navigation({ isAdmin }) {
+  const t = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
 
   const width = useScreenWidth();
   const [collapsed, setCollapsed] = useState(width <= 850);
-  const watchlistFeature = useFeature('WATCHLIST_MANAGEMENT') || false;
 
   useEffect(() => {
     if (width <= 850) {
@@ -35,57 +35,86 @@ export default function Navigation({ isAdmin }) {
   };
 
   const items = [
-    { itemKey: '/dashboard', text: 'Dashboard', icon: <IconHistogram /> },
-    { itemKey: '/jobs', text: 'Jobs', icon: <IconTerminal />, onClick: () => handleNavigationClick('/jobs') },
+    { itemKey: '/dashboard', text: t('nav.dashboard'), icon: <IconHistogram /> },
+    { itemKey: '/jobs', text: t('nav.jobs'), icon: <IconTerminal /> },
     {
       itemKey: 'listings',
-      text: 'Listings',
+      text: t('nav.listings'),
       icon: <IconStar />,
       items: [
-        { itemKey: '/listings', text: 'Overview' },
-        { itemKey: '/map', text: 'Map View' },
+        { itemKey: '/listings', text: t('nav.listingsOverview') },
+        { itemKey: '/map', text: t('nav.mapView') },
+        { itemKey: '/listings/watchlist', text: t('nav.watchlist') },
       ],
     },
   ];
 
   if (isAdmin) {
-    const settingsItems = [
-      { itemKey: '/users', text: 'User Management' },
-      { itemKey: '/generalSettings', text: 'General Settings' },
-    ];
-    if (watchlistFeature) {
-      settingsItems.push({ itemKey: '/watchlistManagement', text: 'Watchlist Management' });
-    }
-
     items.push({
       itemKey: 'settings',
-      text: 'Settings',
+      text: t('nav.settings'),
       icon: <IconSetting />,
-      items: settingsItems,
+      items: [
+        { itemKey: '/users', text: t('nav.userManagement') },
+        { itemKey: '/generalSettings', text: t('nav.settingsPage') },
+      ],
+    });
+  } else {
+    items.push({
+      itemKey: 'settings',
+      text: t('nav.settings'),
+      icon: <IconSetting />,
+      items: [{ itemKey: '/generalSettings', text: t('nav.settingsPage') }],
     });
   }
 
   function parsePathName(name) {
+    // Collect every leaf itemKey that looks like a route (starts with '/').
+    // Prefer the longest exact-prefix match so nested routes like
+    // '/listings/watchlist' resolve to themselves instead of being collapsed
+    // to '/listings'.
+    const allKeys = [];
+    const collect = (nodes) => {
+      for (const n of nodes) {
+        if (typeof n.itemKey === 'string' && n.itemKey.startsWith('/')) allKeys.push(n.itemKey);
+        if (Array.isArray(n.items)) collect(n.items);
+      }
+    };
+    collect(items);
+    const longestMatch = allKeys
+      .filter((k) => name === k || name.startsWith(k + '/'))
+      .sort((a, b) => b.length - a.length)[0];
+    if (longestMatch) return longestMatch;
     const split = name.split('/').filter((s) => s.length !== 0);
     return '/' + split[0];
   }
 
+  const sidebarWidth = collapsed ? '60px' : '220px';
+
   return (
     <Nav
-      style={{ height: '100%' }}
+      style={{ height: '100%', width: sidebarWidth, minWidth: sidebarWidth, maxWidth: sidebarWidth }}
       items={items}
       isCollapsed={collapsed}
       selectedKeys={[parsePathName(location.pathname)]}
       onSelect={({ itemKey }) => {
         handleNavigationClick(itemKey);
       }}
-      header={<img src={collapsed ? heart : logoWhite} width={collapsed ? '80' : '160'} alt="Fredy Logo" />}
+      header={
+        <div className="navigate__header">
+          <img src={collapsed ? heart : logoWhite} width={collapsed ? 30 : 160} alt="Fredy Logo" />
+        </div>
+      }
       footer={
-        <Nav.Footer className="navigate__footer">
+        <Nav.Footer className={`navigate__footer${collapsed ? ' navigate__footer--collapsed' : ''}`}>
           <Logout text={!collapsed} />
-          <Button icon={<IconSidebar />} onClick={() => setCollapsed(!collapsed)}>
-            {collapsed ? '➠' : 'Collapse'}
-          </Button>
+          <button
+            className="navigate__toggle-btn"
+            onClick={() => setCollapsed(!collapsed)}
+            title={collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
+          >
+            <IconSidebar size="default" />
+          </button>
         </Nav.Footer>
       }
     />

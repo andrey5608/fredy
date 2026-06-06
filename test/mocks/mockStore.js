@@ -3,6 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
+/* eslint-disable no-unused-vars */
 const db = {};
 export const storeListings = (jobKey, providerId, listings) => {
   if (!Array.isArray(listings)) throw Error('Not a valid array');
@@ -11,3 +12,27 @@ export const storeListings = (jobKey, providerId, listings) => {
 export const getKnownListingHashesForJobAndProvider = (jobKey, providerId) => {
   return db[providerId] || [];
 };
+
+export const getGeocoordinatesByAddress = (any) => {
+  return null;
+};
+
+export function getUserSettings(userId) {
+  return null;
+}
+
+export async function getSettings() {
+  return { baseUrl: '' };
+}
+
+export const updateListingDistance = (id, distance) => {
+  // noop
+};
+export const deletedIds = [];
+export const deleteListingsById = (ids) => {
+  deletedIds.push(...ids);
+};
+export const deleteListingsByHash = (hashes) => {
+  deletedIds.push(...hashes);
+};
+/* eslint-enable no-unused-vars */

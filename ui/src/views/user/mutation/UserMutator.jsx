@@ -8,12 +8,15 @@ import React from 'react';
 import { xhrGet, xhrPost } from '../../../services/xhr';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useActions } from '../../../services/state/store';
-import { Divider, Input, Switch, Button, Toast } from '@douyinfe/semi-ui';
+import { Divider, Input, Switch, Button, Toast } from '@douyinfe/semi-ui-19';
 import './UserMutator.less';
 import { SegmentPart } from '../../../components/segment/SegmentPart';
-import { IconPlusCircle } from '@douyinfe/semi-icons';
+import { IconPlusCircle, IconArrowLeft } from '@douyinfe/semi-icons';
+import Headline from '../../../components/headline/Headline.jsx';
+import { useTranslation } from '../../../services/i18n/i18n.jsx';
 
 const UserMutator = function UserMutator() {
+  const t = useTranslation();
   const params = useParams();
   const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -54,62 +57,79 @@ const UserMutator = function UserMutator() {
         isAdmin,
       });
       await actions.user.getUsers();
-      Toast.success('User successfully saved...');
+      Toast.success(t('users.mutation.saved'));
       navigate('/users');
     } catch (error) {
       console.error(error);
-      Toast.error(error.json.message);
+      Toast.error(error.json.error);
     }
   };
 
   return (
-    <form className="userMutator">
-      <SegmentPart name="Username" helpText="The username used to login to Fredy">
-        <Input
-          type="text"
-          label="Username"
-          maxLength={30}
-          placeholder="Username"
-          autoFocus
-          width={6}
-          value={username}
-          onChange={(val) => setUsername(val)}
-        />
-      </SegmentPart>
-      <Divider margin="1rem" />
-      <SegmentPart name="Password" helpText="The password used to login to Fredy">
-        <Input
-          mode="password"
-          label="Password"
-          placeholder="Password"
-          width={6}
-          value={password}
-          onChange={(val) => setPassword(val)}
-        />
-      </SegmentPart>
-      <Divider margin="1rem" />
-      <SegmentPart name="Retype password" helpText="Retype the password to make sure they match">
-        <Input
-          mode="password"
-          label="Retype password"
-          placeholder="Retype password"
-          width={6}
-          value={password2}
-          onChange={(val) => setPassword2(val)}
-        />
-      </SegmentPart>
-      <Divider margin="1rem" />
-      <SegmentPart name="Is user an admin?" helpText="Check this if the user is an administrator">
-        <Switch checked={isAdmin} onChange={(checked) => setIsAdmin(checked)} />
-      </SegmentPart>
-      <Divider margin="1rem" />
-      <Button type="danger" style={{ marginRight: '1rem' }} onClick={() => navigate('/users')}>
-        Cancel
-      </Button>
-      <Button type="primary" icon={<IconPlusCircle />} onClick={saveUser}>
-        Save
-      </Button>
-    </form>
+    <>
+      <Headline
+        text={params.userId ? t('users.mutation.editTitle') : t('users.mutation.newTitle')}
+        actions={
+          <Button
+            icon={<IconArrowLeft />}
+            onClick={() => navigate('/users')}
+            theme="borderless"
+            style={{ color: '#909090' }}
+          >
+            {t('users.mutation.back')}
+          </Button>
+        }
+      />
+      <form className="userMutator">
+        <SegmentPart name={t('users.mutation.sectionUsername')} helpText={t('users.mutation.usernameHelp')}>
+          <Input
+            type="text"
+            label={t('users.mutation.sectionUsername')}
+            maxLength={30}
+            placeholder={t('users.mutation.usernamePlaceholder')}
+            autoFocus
+            width={6}
+            value={username}
+            onChange={(val) => setUsername(val)}
+          />
+        </SegmentPart>
+        <Divider margin="1rem" />
+        <SegmentPart name={t('users.mutation.sectionPassword')} helpText={t('users.mutation.passwordHelp')}>
+          <Input
+            mode="password"
+            label={t('users.mutation.sectionPassword')}
+            placeholder={t('users.mutation.passwordPlaceholder')}
+            width={6}
+            value={password}
+            onChange={(val) => setPassword(val)}
+          />
+        </SegmentPart>
+        <Divider margin="1rem" />
+        <SegmentPart name={t('users.mutation.sectionRetypePassword')} helpText={t('users.mutation.retypePasswordHelp')}>
+          <Input
+            mode="password"
+            label={t('users.mutation.sectionRetypePassword')}
+            placeholder={t('users.mutation.retypePasswordPlaceholder')}
+            width={6}
+            value={password2}
+            onChange={(val) => setPassword2(val)}
+          />
+        </SegmentPart>
+        <Divider margin="1rem" />
+        <SegmentPart name={t('users.mutation.sectionIsAdmin')} helpText={t('users.mutation.isAdminHelp')}>
+          <Switch checked={isAdmin} onChange={(checked) => setIsAdmin(checked)} />
+        </SegmentPart>
+        <Divider margin="1rem" />
+        <div className="userMutator__actions">
+          <Button size="small" theme="borderless" style={{ color: '#909090' }} onClick={() => navigate('/users')}>
+            {t('users.mutation.cancel')}
+          </Button>
+          <Button size="small" type="primary" theme="solid" icon={<IconPlusCircle />} onClick={saveUser}>
+            {t('users.mutation.save')}
+          </Button>
+        </div>
+      </form>
+    </>
   );
 };
 

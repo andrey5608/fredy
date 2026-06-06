@@ -10,12 +10,14 @@ import Logo from '../../components/logo/Logo';
 import { xhrPost } from '../../services/xhr';
 import { useNavigate } from 'react-router-dom';
 import { useActions, useSelector } from '../../services/state/store';
-import { Input, Button, Banner, Toast } from '@douyinfe/semi-ui';
+import { Input, Button, Banner } from '@douyinfe/semi-ui-19';
 
 import './login.less';
 import { IconUser, IconLock } from '@douyinfe/semi-icons';
+import { useTranslation } from '../../services/i18n/i18n.jsx';
 
 export default function Login() {
+  const t = useTranslation();
   const actions = useActions();
   const [username, setUserName] = React.useState('');
   const [password, setPassword] = React.useState('');
@@ -33,7 +35,7 @@ export default function Login() {
 
   const tryLogin = async () => {
     if (!username?.trim() || !password) {
-      setError('Username and password are mandatory.');
+      setError(t('login.errorMandatory'));
       return;
     }
     setError(null);
@@ -45,11 +47,9 @@ export default function Login() {
       });
       /* eslint-disable no-unused-vars */
     } catch (ignored) {
-      Toast.error('Login unsuccessful…');
+      setError(t('login.errorInvalid'));
       return;
     }
-
-    Toast.success('Login successful!');
 
     await actions.user.getCurrentUser();
     navigate('/dashboard');
@@ -58,54 +58,62 @@ export default function Login() {
   return (
     <div className="login">
       <div className="login__bgImage" style={{ background: `url("${cityBackground}")` }} />
-      <Logo />
-      <form>
-        <div className="login__loginWrapper">
-          {error && <Banner type="danger" closeIcon={null} description={error} />}
-          <Input
-            size="large"
-            prefix={<IconUser />}
-            placeholder="Username"
-            value={username}
-            showClear
-            autoFocus
-            onChange={(value) => setUserName(value)}
-            onKeyPress={async (e) => {
-              if (e.key === 'Enter') {
-                await tryLogin();
-              }
-            }}
-          />
-
-          <Input
-            size="large"
-            mode="password"
-            prefix={<IconLock />}
-            value={password}
-            placeholder="Password"
-            onChange={(value) => setPassword(value)}
-            onKeyPress={async (e) => {
-              if (e.key === 'Enter') {
-                await tryLogin();
-              }
-            }}
-          />
-
-          <Button type="primary" onClick={tryLogin} theme="solid" style={{ marginTop: '1rem' }}>
-            Login
-          </Button>
-
-          {demoMode && (
-            <Banner
-              fullMode={true}
-              type="info"
-              bordered
-              closeIcon={null}
-              description="This is the demo version of Fredy. Use 'demo' as both the username and password to log in."
-            />
-          )}
+      <div className="login__loginWrapper">
+        <div className="login__logoWrapper">
+          <Logo width={250} white />
         </div>
-      </form>
+
+        {demoMode && (
+          <Banner
+            fullMode={true}
+            type="info"
+            bordered
+            closeIcon={null}
+            description={t('login.demoBanner')}
+            style={{ marginBottom: '1.5rem' }}
+          />
+        )}
+
+        <form onSubmit={(e) => e.preventDefault()}>
+          {error && <Banner type="danger" closeIcon={null} description={error} style={{ marginBottom: '1rem' }} />}
+          <div className="login__inputGroup">
+            <Input
+              size="large"
+              prefix={<IconUser />}
+              placeholder={t('login.usernamePlaceholder')}
+              value={username}
+              showClear
+              autoFocus
+              onChange={(value) => setUserName(value)}
+              onKeyPress={async (e) => {
+                if (e.key === 'Enter') {
+                  await tryLogin();
+                }
+              }}
+            />
+          </div>
+
+          <div className="login__inputGroup">
+            <Input
+              size="large"
+              mode="password"
+              prefix={<IconLock />}
+              value={password}
+              placeholder={t('login.passwordPlaceholder')}
+              onChange={(value) => setPassword(value)}
+              onKeyPress={async (e) => {
+                if (e.key === 'Enter') {
+                  await tryLogin();
+                }
+              }}
+            />
+          </div>
+
+          <Button block type="primary" onClick={tryLogin} theme="solid" style={{ marginTop: '1rem' }}>
+            {t('login.loginButton')}
+          </Button>
+        </form>
+      </div>
     </div>
   );
 }

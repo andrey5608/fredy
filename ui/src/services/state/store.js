@@ -8,7 +8,7 @@
  */
 import { create } from 'zustand';
 import { shallow } from 'zustand/shallow';
-import { xhrGet } from '../xhr.js';
+import { xhrGet, xhrPost } from '../xhr.js';
 import queryString from 'query-string';
 
 const logger = (config) => (set, get, api) =>
@@ -27,10 +27,21 @@ const logger = (config) => (set, get, api) =>
     api,
   );
 
+/**
+ * Middleware to track loading state of async actions.
+ */
+const loadingTracker = (config) => (set, get, api) => {
+  const wrappedSet = (partial, replace) => {
+    set(partial, replace);
+  };
+
+  return config(wrappedSet, get, api);
+};
+
 // Create the Zustand store with slices and actions
 export const useFredyState = create(
   logger(
-    (set) => {
+    loadingTracker((set) => {
       // Async actions that directly set state (no separate reducer concept)
       const effects = {
         dashboard: {
@@ -71,16 +82,6 @@ export const useFredyState = create(
               set((state) => ({ generalSettings: { ...state.generalSettings, settings: response.json } }));
             } catch (Exception) {
               console.error('Error while trying to get resource for api/admin/generalSettings. Error:', Exception);
-            }
-          },
-        },
-        features: {
-          async getFeatures() {
-            try {
-              const response = await xhrGet('/api/features');
-              set((state) => ({ ...state.features, ...response.json }));
-            } catch (Exception) {
-              console.error('Error while trying to get resource for api/features. Error:', Exception);
             }
           },
         },
@@ -190,6 +191,23 @@ export const useFredyState = create(
             }
           },
         },
+        tracking: {
+          async getTrackingPois() {
+            try {
+              const response = await xhrGet('/api/tracking/trackingPois');
+              set((state) => ({ tracking: { ...state.tracking, pois: Object.freeze(response.json) } }));
+            } catch (Exception) {
+              console.error('Error while trying to get resource for api/tracking. Error:', Exception);
+            }
+          },
+          async trackPoi(poi) {
+            try {
+              await xhrPost('/api/tracking/poi', { poi });
+            } catch (Exception) {
+              console.error('Error while trying to track poi. Error:', Exception);
+            }
+          },
+        },
         listingsData: {
           async getListingsData({
             page = 1,
@@ -200,20 +218,35 @@ export const useFredyState = create(
             filter,
           }) {
             try {
-              const qryString = queryString.stringify({
-                page,
-                pageSize,
-                freeTextFilter,
-                sortfield,
-                sortdir,
-                ...filter,
-              });
+              const qryString = queryString.stringify(
+                {
+                  page,
+                  pageSize,
+                  freeTextFilter,
+                  sortfield,
+                  sortdir,
+                  ...filter,
+                },
+                { skipNull: true, skipEmptyString: true },
+              );
               const response = await xhrGet(`/api/listings/table?${qryString}`);
               set((state) => ({
                 listingsData: { ...state.listingsData, ...response.json },
               }));
             } catch (Exception) {
               console.error('Error while trying to get resource for api/listings. Error:', Exception);
+            }
+          },
+          async getListing(listingId) {
+            try {
+              const response = await xhrGet(`/api/listings/${listingId}`);
+              set((state) => ({
+                listingsData: { ...state.listingsData, currentListing: response.json },
+              }));
+              return response.json;
+            } catch (Exception) {
+              console.error(`Error while trying to get resource for api/listings/${listingId}. Error:`, Exception);
+              throw Exception;
             }
           },
           async getListingsForMap({ jobId, minPrice, maxPrice } = {}) {
@@ -238,6 +271,139 @@ export const useFredyState = create(
               console.error('Error while trying to get resource for api/listings/map. Error:', Exception);
             }
           },
+          async setListingStatus(listingId, status) {
+            try {
+              await xhrPost(`/api/listings/${listingId}/status`, { status });
+            } catch (Exception) {
+              console.error(`Error while trying to set status for listing ${listingId}. Error:`, Exception);
+              throw Exception;
+            }
+          },
+          async setListingNotes(listingId, notes) {
+            try {
+              await xhrPost(`/api/listings/${listingId}/notes`, { notes });
+            } catch (Exception) {
+              console.error(`Error while trying to set notes for listing ${listingId}. Error:`, Exception);
+              throw Exception;
+            }
+          },
+        },
+        userSettings: {
+          async getUserSettings() {
+            try {
+              const response = await xhrGet('/api/user/settings');
+              set((state) => ({ userSettings: { ...state.userSettings, settings: response.json, loaded: true } }));
+            } catch (Exception) {
+              console.error('Error while trying to get resource for api/user/settings. Error:', Exception);
+              // Mark as loaded even on error to prevent blocking the UI
+              set((state) => ({ userSettings: { ...state.userSettings, loaded: true } }));
+            }
+          },
+          async setNewsHash(newsHash) {
+            try {
+              await xhrPost('/api/user/settings/news-hash', { news_hash: newsHash });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, news_hash: newsHash },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update news hash. Error:', Exception);
+              throw Exception;
+            }
+          },
+          async setHomeAddress(address) {
+            try {
+              const response = await xhrPost('/api/user/settings/home-address', { home_address: address });
+              if (response.status === 200) {
+                set((state) => ({
+                  userSettings: {
+                    ...state.userSettings,
+                    settings: {
+                      ...state.userSettings.settings,
+                      home_address: { address, coords: response.json.coords },
+                    },
+                  },
+                }));
+                return response.json;
+              }
+              throw response;
+            } catch (Exception) {
+              console.error('Error while trying to update home address. Error:', Exception);
+              throw Exception;
+            }
+          },
+          async setProviderDetails(providers) {
+            try {
+              await xhrPost('/api/user/settings/provider-details', { provider_details: providers });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, provider_details: providers },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update provider details setting. Error:', Exception);
+              throw Exception;
+            }
+          },
+          async setListingsViewMode(listings_view_mode) {
+            try {
+              await xhrPost('/api/user/settings/listings-view-mode', { listings_view_mode });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, listings_view_mode },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update listings view mode setting. Error:', Exception);
+              throw Exception;
+            }
+          },
+          async setJobsViewMode(jobs_view_mode) {
+            try {
+              await xhrPost('/api/user/settings/jobs-view-mode', { jobs_view_mode });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, jobs_view_mode },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update jobs view mode setting. Error:', Exception);
+              throw Exception;
+            }
+          },
+          async setListingDeletionPreference(listing_deletion_preference) {
+            try {
+              await xhrPost('/api/user/settings/listing-deletion-preference', { listing_deletion_preference });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, listing_deletion_preference },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update listing deletion preference. Error:', Exception);
+              throw Exception;
+            }
+          },
+          async setLanguage(language) {
+            try {
+              await xhrPost('/api/user/settings/language', { language });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, language },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update language setting. Error:', Exception);
+              throw Exception;
+            }
+          },
         },
       };
 
@@ -251,12 +417,14 @@ export const useFredyState = create(
           page: 1,
           result: [],
           mapListings: [],
+          currentListing: null,
           maxPrice: 0,
         },
-        features: {},
         generalSettings: { settings: {} },
+        userSettings: { settings: {}, loaded: false },
         demoMode: { demoMode: false },
         versionUpdate: {},
+        tracking: { pois: {} },
         provider: [],
         jobsData: {
           jobs: [],
@@ -275,19 +443,42 @@ export const useFredyState = create(
         generalSettings: { ...effects.generalSettings },
         demoMode: { ...effects.demoMode },
         versionUpdate: { ...effects.versionUpdate },
+        tracking: { ...effects.tracking },
         listingsData: { ...effects.listingsData },
         provider: { ...effects.provider },
-        features: { ...effects.features },
         jobsData: { ...effects.jobsData },
         user: { ...effects.user },
+        userSettings: { ...effects.userSettings },
       };
+
+      // Wrap actions to track loading state
+      const wrappedActions = {};
+      Object.keys(actions).forEach((slice) => {
+        wrappedActions[slice] = {};
+        Object.keys(actions[slice]).forEach((actionName) => {
+          const originalAction = actions[slice][actionName];
+          if (typeof originalAction === 'function') {
+            wrappedActions[slice][actionName] = async (...args) => {
+              const fullActionName = `${slice}.${actionName}`;
+              set((state) => ({ loading: { ...state.loading, [fullActionName]: true } }));
+              try {
+                return await originalAction(...args);
+              } finally {
+                set((state) => ({ loading: { ...state.loading, [fullActionName]: false } }));
+              }
+            };
+          } else {
+            wrappedActions[slice][actionName] = originalAction;
+          }
+        });
+      });
 
       return {
         ...initial,
-        __actions: { actions },
+        loading: {},
+        __actions: { actions: wrappedActions },
       };
-    },
-    { name: 'fredy' },
+    }),
   ),
 );
 
@@ -310,4 +501,28 @@ export function useSelector(selector, equalityFn = shallow) {
  */
 export function useActions() {
   return useFredyState((s) => s.__actions.actions);
+}
+
+/**
+ * Hook to check if a specific action is currently loading.
+ * @param {Function} action - The action function from useActions()
+ * @returns {boolean}
+ */
+export function useIsLoading(action) {
+  const actions = useActions();
+  const loading = useSelector((state) => state.loading);
+
+  // Find the action name by comparing the function
+  let actionPath = null;
+  for (const slice in actions) {
+    for (const name in actions[slice]) {
+      if (actions[slice][name] === action) {
+        actionPath = `${slice}.${name}`;
+        break;
+      }
+    }
+    if (actionPath) break;
+  }
+
+  return !!loading[actionPath];
 }

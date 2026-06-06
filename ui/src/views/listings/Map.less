@@ -1,25 +1,58 @@
 /*
- * Copyright (c) 2025 by Christian Kellner.
+ * Copyright (c) 2026 by Christian Kellner.
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
+
+@import '../../tokens.less';
 
 .map-view-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px); /* Adjust based on header/footer height */
-  padding: 1rem;
-}
+  height: 100%;
+  padding: 0;
+  box-sizing: border-box;
 
-.map-filter-bar {
-  margin-bottom: 1rem;
+  &__map-wrapper {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__floating-panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    background: rgba(22, 25, 38, 0.95);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid @color-border;
+    border-radius: @radius-card;
+    padding: 14px 16px;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  &__panel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__price-slider {
+    width: 140px;
+  }
 }
 
 .map-container {
-  flex-grow: 1;
   width: 100%;
+  height: 100%;
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--semi-color-border);
+  border: 1px solid #262a3a;
 }
 
 .map-popup-content {
@@ -43,14 +76,89 @@
   }
 
   .info {
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.1rem;
+  }
+
+  &__linkButton {
+    background: var(--semi-color-primary);
+    color: white;
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    height: 32px;
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+
+    a {
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      width: 100%;
+      height: 100%;
+    }
+
+    &:hover {
+      background: var(--semi-color-primary-hover);
+      cursor: pointer;
+    }
+  }
+
+  &__detailsButton {
+    background: var(--semi-color-tertiary);
+    color: white;
+    border: none;
+    font-size: 14px;
+    height: 32px;
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+      background: var(--semi-color-tertiary-hover);
+    }
+
+    svg {
+      fill: currentColor;
+    }
+  }
+
+  &__deleteButton {
+    background: var(--semi-color-danger);
+    color: white;
+    border: none;
+    font-size: 14px;
+    height: 32px;
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+      background: var(--semi-color-danger-hover);
+    }
+
+    svg {
+      fill: currentColor;
+    }
   }
 }
 
-/* Override MapLibre default popup styles to match application theme */
+/* Override MapLibre default popup styles */
 .maplibregl-popup-content {
   background-color: var(--semi-color-bg-1) !important;
   color: var(--semi-color-text-0) !important;
@@ -64,21 +172,32 @@
 }
 
 .map {
-  &__rangesliderLabels{
-    color: white;
+  &__rangesliderLabels {
+    color: #94a3b8;
     display: flex;
     justify-content: space-between;
     margin-bottom: .3rem;
     font-size: .7rem;
   }
 }
+
 .range-slider .range-slider__thumb {
   position: absolute;
   z-index: 3;
   top: 50%;
-  width: 16px;
-  height: 16px;
+  width: 12px;
+  height: 12px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
-  background: #2196f3;
+  background: @color-accent;
+}
+
+.range-slider .range-slider__range {
+  background: @color-accent;
+}
+
+.range-slider {
+  background: rgba(255,255,255,0.12);
+  border-radius: 4px;
+  height: 4px !important;
 }

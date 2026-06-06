@@ -23,7 +23,7 @@
 
 
 
-# Fredy 🏡 – Your Self-Hosted Real Estate Finder for Germany
+# Fredy 🏡 - Your Self-Hosted Real Estate Finder for Germany
 
 Finding an apartment or house in Germany can be stressful and
 time-consuming.\
@@ -154,11 +154,52 @@ to Slack + Telegram."\
 Jobs run automatically at the interval you configure (see
 `/conf/config.json`).
 
+### MCP Server 🤖
+
+Starting with **V20**, Fredy ships with a built-in **MCP Server **. This allows you to connect Fredy to LLMs (like Claude, ChatGPT, or local models via LM Studio) and query your real estate data using natural language.
+The local LLM can even enrich existing listings by checking the listing online.   
+
+For more information on how to set it up and use it, please refer to the [MCP Readme](lib/mcp/README.md).
+
 ------------------------------------------------------------------------
 
 ## Immoscout
 
 Immoscout has implemented advanced bot detection. In order to work around this, we are using a reversed engineered version of their mobile api. See [Immoscout Reverse Engineering Documentation](https://github.com/orangecoding/fredy/blob/master/reverse-engineered-immoscout.md)
+
+## 🛡️ Bot Detection & Proxies
+
+Most browser-based providers (immowelt, immonet, kleinanzeigen, ...) are scraped through a hardened headless browser ([CloakBrowser](https://www.npmjs.com/package/cloakbrowser)). It makes the **browser fingerprint** indistinguishable from a real Chrome, which is enough when you run Fredy on a normal home connection.
+
+On a **server / VPS the requests usually originate from a datacenter IP**, and providers behind anti-bot systems (e.g. AWS CloudFront/WAF) block those based on **IP reputation alone**, no matter how perfect the fingerprint is. The typical symptom: it works locally but you get `We have been detected as a bot :-/` on the server.
+
+### The fix: a residential proxy
+
+A **residential proxy** routes Fredy's browser through the internet connection of a real household, so the provider sees a "normal user" IP instead of a datacenter. For German portals, use a **German (DE) residential** (or mobile/4G) proxy. Plain VPNs and **datacenter proxies do not help** here, they share the same bad reputation as your server.
+
+**Configure it** under **Settings → Execution → Proxy URL**. Supported formats:
+
+```
+http://user:pass@host:port
+socks5://user:pass@host:port
+```
+
+Leave the field empty to disable. The proxy applies to all headless-browser providers and takes effect on the next job run (no restart needed). Immoscout uses a separate mobile API and is not affected.
+
+### Where to get a residential proxy
+
+Residential proxies are a paid service (usually billed per GB, Fredy's traffic is small). Well-known providers offering German residential IPs include:
+
+| Provider | Notes |
+|---|---|
+| [IPRoyal](https://iproyal.com) | Pay-as-you-go, no monthly minimum, good for low volume |
+| [Webshare](https://www.webshare.io) | Cheap entry tier, has a small free plan to test with |
+| [Decodo (formerly Smartproxy)](https://decodo.com) | Easy setup, country/city targeting |
+| [SOAX](https://soax.com) | Residential + mobile, fine-grained geo-targeting |
+| [Bright Data](https://brightdata.com) | Largest pool, most features, higher complexity/price |
+| [Oxylabs](https://oxylabs.io) | Enterprise-grade, larger plans |
+
+This is not an endorsement, pick whatever fits your budget. For low-volume use like Fredy, a pay-as-you-go plan (e.g. IPRoyal) or a cheap entry tier (e.g. Webshare) is usually plenty. Make sure to select **Germany** as the proxy location and keep the search interval reasonable (the higher the interval, the less you look like a bot).
 
 **Thanks**🤘
 
@@ -174,9 +215,55 @@ You should now be able to access _Fredy_ from your browser. Check your Terminal 
 
 ### Run Tests
 
+## "Online" tests
+These tests are directly executed against the actual providers.
 ``` bash
 yarn run test
 ```
+
+## "Offline" tests
+These tests are using the test fixtures instead of the actual providers. Much faster and "good enough" to test the core functionality.
+``` bash
+yarn run test:offline
+```
+
+## Download new fixtures
+If you have to refresh the fixtures (every once in a while needed because the providers change their code), run this command:
+``` bash
+yarn run download-fixtures
+```
+
+## Adding a new language
+
+Fredy's UI is fully multilingual. Translation files live in `ui/src/locales/`. To add a new language, create a single JSON file there, no code changes required.
+
+**Example: `ui/src/locales/fr.json`**
+```json
+{
+  "_meta": {
+    "flag": "🇫🇷",
+    "name": "Français",
+    "locale": "fr-FR",
+    "semiLocale": "fr"
+  },
+  "nav.dashboard": "Tableau de bord",
+  "common.save": "Enregistrer",
+  ...
+}
+```
+
+The `_meta` fields:
+
+| Field | Description |
+|---|---|
+| `flag` | Unicode flag emoji shown in the language selector |
+| `name` | Display name shown in the language selector |
+| `locale` | BCP 47 locale string used for date and number formatting (e.g. `fr-FR`) |
+| `semiLocale` | Semi UI locale key for component-level strings (date pickers, pagination, etc.) |
+
+> **Important:** `semiLocale` must exactly match a locale filename from the Semi UI locale sources (without the `.js` extension). See the [available Semi UI locales on GitHub](https://github.com/DouyinFE/semi-design/tree/main/packages/semi-ui/locale/source) for the full list of supported keys.
+
+After adding the file, rebuild the frontend (`yarn build:frontend` or restart the dev server) and the new language will appear automatically in **Settings → User Settings → Language**.
 
 ------------------------------------------------------------------------
 
@@ -210,6 +297,20 @@ flowchart TD
     E -- No --> F1
     F1 --> F2
 ```
+
+------------------------------------------------------------------------
+## 🤖 Using AI such as Claude Code
+When I started building Fredy, LLMs were still basically the wet dream of a few nerdy scientists.
+
+Nowadays, it’s easier than ever to throw a prompt into the LLM of your choice and let 'the AI' build your stuff. I’m not against that. I use Claude Code myself for smaller tasks, and I do think these tools can be really useful.
+
+That said, I still believe humans should stay in charge. AI is great-ish at writing code, but it still lacks creativity, context, and the ability to see the full picture.
+
+So, if you want to contribute to Fredy, using AI tools to get things done is totally fine. Just please don’t stop thinking.
+
+I’ve had one too many PRs full of hallucinated bullshit.
+
+**Thanks ;)**
 
 ------------------------------------------------------------------------
 

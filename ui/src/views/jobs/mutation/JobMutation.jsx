@@ -3,16 +3,17 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import React, { Fragment, useEffect, useMemo, useState, useLayoutEffect } from 'react';
+import { Fragment, useEffect, useMemo, useState, useCallback, useLayoutEffect } from 'react';
 
 import NotificationAdapterMutator from './components/notificationAdapter/NotificationAdapterMutator';
 import NotificationAdapterTable from '../../../components/table/NotificationAdapterTable';
 import ProviderTable from '../../../components/table/ProviderTable';
 import ProviderMutator from './components/provider/ProviderMutator';
+import AreaFilter from './components/areaFilter/AreaFilter';
 import Headline from '../../../components/headline/Headline';
 import { useActions, useSelector } from '../../../services/state/store';
 import { xhrPost } from '../../../services/xhr';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import {
   Divider,
   Input,
@@ -24,32 +25,50 @@ import {
   Modal,
   Typography,
   Notification,
-} from '@douyinfe/semi-ui';
+} from '@douyinfe/semi-ui-19';
 import './JobMutation.less';
 import { SegmentPart } from '../../../components/segment/SegmentPart';
 import {
+  IconArrowLeft,
   IconBell,
   IconBriefcase,
   IconPaperclip,
   IconPlayCircle,
   IconPlusCircle,
   IconUser,
-  IconClear,
+  IconFilter,
 } from '@douyinfe/semi-icons';
+import { useTranslation } from '../../../services/i18n/i18n.jsx';
 
 export default function JobMutator() {
+  const t = useTranslation();
+
+  const SPEC_FILTERS = [
+    { key: 'maxPrice', translation: t('jobs.mutation.filterMaxPrice') },
+    { key: 'minSize', translation: t('jobs.mutation.filterMinSize') },
+    { key: 'minRooms', translation: t('jobs.mutation.filterMinRooms') },
+  ];
+
   const jobs = useSelector((state) => state.jobsData.jobs);
   const shareableUserList = useSelector((state) => state.jobsData.shareableUserList);
   const existingNotificationAdapters = useSelector((state) => state.notificationAdapterExisting);
   const params = useParams();
+  const location = useLocation();
 
+  const cloneFromId = location.state?.cloneFrom;
+  const jobToClone = cloneFromId ? jobs.find((job) => job.id === cloneFromId) : null;
   const jobToBeEdit = params.jobId == null ? null : jobs.find((job) => job.id === params.jobId);
 
-  const defaultBlacklist = jobToBeEdit?.blacklist || [];
-  const defaultName = jobToBeEdit?.name || null;
-  const defaultProviderData = jobToBeEdit?.provider || [];
-  const defaultNotificationAdapter = jobToBeEdit?.notificationAdapter || [];
-  const defaultEnabled = jobToBeEdit?.enabled ?? true;
+  const sourceJob = jobToBeEdit || jobToClone;
+
+  const defaultBlacklist = sourceJob?.blacklist || [];
+  const defaultName = jobToClone ? `Copy of - ${sourceJob?.name}` : sourceJob?.name || null;
+  const defaultProviderData = sourceJob?.provider || [];
+  const defaultNotificationAdapter = sourceJob?.notificationAdapter || [];
+  const defaultEnabled = sourceJob?.enabled ?? true;
+  const defaultShareWithUsers = sourceJob?.shared_with_user ?? [];
+  const defaultSpatialFilter = sourceJob?.spatialFilter || null;
+  const defaultSpecFilter = sourceJob?.specFilter || null;
 
   const [providerToEdit, setProviderToEdit] = useState(null);
   const [providerCreationVisible, setProviderCreationVisibility] = useState(false);
@@ -59,8 +78,10 @@ export default function JobMutator() {
   const [name, setName] = useState(defaultName);
   const [blacklist, setBlacklist] = useState(defaultBlacklist);
   const [notificationAdapterData, setNotificationAdapterData] = useState(defaultNotificationAdapter);
-  const [shareWithUsers, setShareWithUsers] = useState(jobToBeEdit?.shared_with_user ?? []);
+  const [shareWithUsers, setShareWithUsers] = useState(defaultShareWithUsers);
   const [enabled, setEnabled] = useState(defaultEnabled);
+  const [spatialFilter, setSpatialFilter] = useState(defaultSpatialFilter);
+  const [specFilter, setSpecFilter] = useState(defaultSpecFilter);
   const [reuseAdapterSelection, setReuseAdapterSelection] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const [confirmVisible, setConfirmVisible] = useState(false);
@@ -68,6 +89,17 @@ export default function JobMutator() {
   const [saving, setSaving] = useState(false);
   const navigate = useNavigate();
   const actions = useActions();
+
+  // Memoize the spatial filter change handler to prevent map reinitializations
+  const handleSpatialFilterChange = useCallback((data) => {
+    setSpatialFilter(data);
+  }, []);
+
+  const handleSpecFilterChange = (key, value) => {
+    if (!SPEC_FILTERS.map(({ key }) => key).includes(key)) return;
+
+    setSpecFilter({ ...specFilter, [key]: value ? parseFloat(value) : null });
+  };
 
   useEffect(() => {
     // Sync form and baseline when switching between jobs or when data arrives later
@@ -92,8 +124,6 @@ export default function JobMutator() {
       adapter,
     }));
   }, [existingNotificationAdapters]);
-
-  // Legacy change detection hooks were unused; remove to satisfy lint
 
   const addOrReplaceAdapter = (adapterConfig) => {
     setNotificationAdapterData((prev) => {
@@ -127,11 +157,13 @@ export default function JobMutator() {
         shareWithUsers,
         name,
         blacklist,
+        spatialFilter,
+        specFilter,
         enabled,
         jobId: jobToBeEdit?.id || null,
       });
       await actions.jobsData.getJobs();
-      Toast.success('Job successfully saved...');
+      Toast.success(t('jobs.mutation.saved'));
       if (redirectToJobs) {
         navigate('/jobs');
       }
@@ -204,14 +236,26 @@ export default function JobMutator() {
         />
       )}
 
-      <Headline text={jobToBeEdit ? 'Edit Job' : 'Create new Job'} />
+      <Headline
+        text={jobToBeEdit ? t('jobs.mutation.editTitle') : t('jobs.mutation.createTitle')}
+        actions={
+          <Button
+            icon={<IconArrowLeft />}
+            onClick={() => navigate('/jobs')}
+            theme="borderless"
+            style={{ color: '#909090' }}
+          >
+            {t('jobs.mutation.back')}
+          </Button>
+        }
+      />
       <form>
-        <SegmentPart name="Name" Icon={IconPaperclip}>
+        <SegmentPart name={t('jobs.mutation.sectionName')} Icon={IconPaperclip}>
           <Input
             autoFocus
             type="text"
             maxLength={40}
-            placeholder="Name"
+            placeholder={t('jobs.mutation.namePlaceholder')}
             width={6}
             value={name}
             onChange={(value) => setName(value)}
@@ -219,13 +263,9 @@ export default function JobMutator() {
         </SegmentPart>
         <Divider margin="1rem" />
         <SegmentPart
-          name="Providers"
+          name={t('jobs.mutation.sectionProviders')}
           Icon={IconBriefcase}
-          helpText={`
-            A provider is essentially the service (e.g. ImmoScout24, Kleinanzeigen) that Fredy searches for new listings.
-            Fredy will open a new tab pointing to the website of this provider. You have to adjust your search parameter
-            and click on "Search". If the results are being shown, copy the browser URL in here.
-            `}
+          helpText={t('jobs.mutation.providersHelp')}
         >
           <Button
             type="primary"
@@ -236,7 +276,7 @@ export default function JobMutator() {
               setProviderCreationVisibility(true);
             }}
           >
-            Add new Provider
+            {t('jobs.mutation.addProvider')}
           </Button>
 
           <ProviderTable
@@ -253,8 +293,8 @@ export default function JobMutator() {
         <Divider margin="1rem" />
         <SegmentPart
           Icon={IconBell}
-          name="Notification Adapters"
-          helpText="Fredy supports multiple ways to notify you about new findings. These are called notification adapter. You can chose between email, Telegram etc."
+          name={t('jobs.mutation.sectionNotifications')}
+          helpText={t('jobs.mutation.notificationsHelp')}
         >
           <Button
             type="primary"
@@ -262,7 +302,7 @@ export default function JobMutator() {
             icon={<IconPlusCircle />}
             onClick={() => setNotificationCreationVisibility(true)}
           >
-            Add new Notification Adapter
+            {t('jobs.mutation.addNotification')}
           </Button>
 
           {existingAdapterOptions.length > 0 && (
@@ -303,29 +343,53 @@ export default function JobMutator() {
         </SegmentPart>
         <Divider margin="1rem" />
         <SegmentPart
-          Icon={IconClear}
-          name="Blacklist"
-          helpText="If a listing contains one of these words, it will be filtered out. Type in a word, then hit enter."
+          Icon={IconFilter}
+          name={t('jobs.mutation.sectionBlacklist')}
+          helpText={t('jobs.mutation.blacklistHelp')}
         >
           <TagInput
             value={blacklist || []}
-            placeholder="Add a word for filtering..."
+            placeholder={t('jobs.mutation.blacklistPlaceholder')}
             onChange={(v) => setBlacklist([...v])}
           />
         </SegmentPart>
         <Divider margin="1rem" />
         <SegmentPart
-          Icon={IconUser}
-          name="Sharing with user"
-          helpText="You can share this job with other users. They will be able to see the listings, but only (as the creator) you can edit the job. Admins are filtered from this list as they have access to everything."
+          Icon={IconFilter}
+          name={t('jobs.mutation.sectionCriteriaFilter')}
+          helpText={t('jobs.mutation.criteriaFilterHelp')}
         >
+          <div className="jobMutation__specFilter">
+            {SPEC_FILTERS.map((filter) => (
+              <div key={filter.key} className="jobMutation__specFilterItem">
+                <div className="jobMutation__specFilterLabel">{filter.translation}</div>
+                <Input
+                  type="number"
+                  placeholder={t('jobs.mutation.criteriaNumberPlaceholder')}
+                  value={specFilter?.[filter.key]}
+                  onChange={(value) => handleSpecFilterChange(filter.key, value)}
+                />
+              </div>
+            ))}
+          </div>
+        </SegmentPart>
+        <Divider margin="1rem" />
+        <SegmentPart
+          Icon={IconFilter}
+          name={t('jobs.mutation.sectionAreaFilter')}
+          helpText={t('jobs.mutation.areaFilterHelp')}
+        >
+          <AreaFilter spatialFilter={spatialFilter} onChange={handleSpatialFilterChange} />
+        </SegmentPart>
+        <Divider margin="1rem" />
+        <SegmentPart Icon={IconUser} name={t('jobs.mutation.sectionSharing')} helpText={t('jobs.mutation.sharingHelp')}>
           {shareableUserList.length === 0 ? (
-            <div>No users found to share this Job to. Please create additional non-admin user.</div>
+            <div>{t('jobs.mutation.sharingNoUsers')}</div>
           ) : (
             <Select
               filter
               multiple
-              placeholder="Search user"
+              placeholder={t('jobs.mutation.sharingSearchPlaceholder')}
               autoClearSearchValue={false}
               defaultValue={shareWithUsers}
               onChange={(value) => setShareWithUsers(value)}
@@ -341,14 +405,14 @@ export default function JobMutator() {
         <Divider margin="1rem" />
         <SegmentPart
           Icon={IconPlayCircle}
-          name="Job activation"
-          helpText="Whether or not the job is activated. Inactive jobs will be ignored when Fredy checks for new listings."
+          name={t('jobs.mutation.sectionActivation')}
+          helpText={t('jobs.mutation.activationHelp')}
         >
           <Switch className="jobMutation__spaceTop" onChange={(checked) => setEnabled(checked)} checked={enabled} />
         </SegmentPart>
         <Divider margin="1rem" />
         <Button type="danger" style={{ marginRight: '1rem' }} onClick={() => navigate('/jobs')}>
-          Cancel
+          {t('jobs.mutation.cancel')}
         </Button>
         <Button
           type="primary"
@@ -357,7 +421,7 @@ export default function JobMutator() {
           loading={saving}
           onClick={() => mutateJob()}
         >
-          Save
+          {t('jobs.mutation.save')}
         </Button>
       </form>
 

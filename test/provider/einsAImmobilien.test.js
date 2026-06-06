@@ -6,44 +6,47 @@
 import * as similarityCache from '../../lib/services/similarity-check/similarityCache.js';
 import { get } from '../mocks/mockNotification.js';
 import { providerConfig, mockFredy } from '../utils.js';
-import { expect } from 'chai';
+import { expect } from 'vitest';
 import * as provider from '../../lib/provider/einsAImmobilien.js';
 
 describe('#einsAImmobilien testsuite()', () => {
-  provider.init(providerConfig.einsAImmobilien, [], []);
+  provider.init(providerConfig.einsAImmobilien, []);
   it('should test einsAImmobilien provider', async () => {
     const Fredy = await mockFredy();
-    // Short-circuit network calls with a deterministic fixture
-    provider.config.getListings = async () => [
-      {
-        id: '123',
-        price: '1.000 €',
-        size: '70 m²',
-        title: 'Schone Wohnung',
-        image: '/bild.jpg',
-        address: 'Hauptstrasse/1',
-      },
-    ];
-
-    const fredy = new Fredy(provider.config, null, provider.metaInformation.id, 'einsAImmobilien', similarityCache);
-    const listings = await fredy.execute();
-
-    expect(listings).to.be.a('array');
-    const notificationObj = get();
-    expect(notificationObj).to.be.a('object');
-    expect(notificationObj.serviceName).to.equal('einsAImmobilien');
-    notificationObj.payload.forEach((notify) => {
-      /** check the actual structure **/
-      expect(notify.id).to.be.a('string');
-      expect(notify.price).to.be.a('string');
-      expect(notify.size).to.be.a('string');
-      expect(notify.title).to.be.a('string');
-      expect(notify.link).to.be.a('string');
-      expect(notify.address).to.be.a('string');
-      /** check the values if possible **/
-      expect(notify.size).to.be.not.empty;
-      expect(notify.title).to.be.not.empty;
-      expect(notify.link).that.does.include('https://www.1a-immobilienmarkt.de');
+    const mockedJob = {
+      id: 'einsAImmobilien',
+      notificationAdapter: null,
+      spatialFilter: null,
+      specFilter: null,
+    };
+    return await new Promise((resolve, reject) => {
+      const fredy = new Fredy(provider.config, mockedJob, provider.metaInformation.id, similarityCache, undefined);
+      fredy.execute().then((listings) => {
+        if (listings == null || listings.length === 0) {
+          reject('Listings is empty!');
+          return;
+        }
+        expect(listings).toBeInstanceOf(Array);
+        const notificationObj = get();
+        expect(notificationObj).toBeTypeOf('object');
+        expect(notificationObj.serviceName).toBe('einsAImmobilien');
+        notificationObj.payload.forEach((notify) => {
+          /** check the actual structure **/
+          expect(notify.id).toBeTypeOf('string');
+          expect(notify.price).toBeTypeOf('string');
+          expect(notify.price).toContain('€');
+          expect(notify.size).toBeTypeOf('string');
+          expect(notify.size).toContain('m²');
+          expect(notify.title).toBeTypeOf('string');
+          expect(notify.link).toBeTypeOf('string');
+          expect(notify.address).toBeTypeOf('string');
+          /** check the values if possible **/
+          expect(notify.size).toBeTypeOf('string');
+          expect(notify.title).not.toBe('');
+          expect(notify.link).toContain('https://www.1a-immobilienmarkt.de');
+        });
+        resolve();
+      });
     });
   });
 });
