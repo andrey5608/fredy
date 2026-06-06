@@ -1,7 +1,5 @@
-import { expect } from 'chai';
-import esmock from 'esmock';
-
-const navLogicPath = '../../ui/src/components/navigation/navigationLogic.js';
+import { describe, it, beforeEach, afterEach, expect } from 'vitest';
+import { navigationSelectHandler } from '../../ui/src/components/navigation/navigationLogic.js';
 
 describe('Navigation onSelect behaviour', () => {
   let originalWindow;
@@ -31,8 +29,6 @@ describe('Navigation onSelect behaviour', () => {
     const navigateCalls = [];
     const navigateSpy = (path) => navigateCalls.push(path);
 
-    const { navigationSelectHandler } = await esmock(navLogicPath);
-
     let eventDetail;
     const listener = (e) => {
       eventDetail = e.detail;
@@ -41,8 +37,8 @@ describe('Navigation onSelect behaviour', () => {
 
     navigationSelectHandler({ target: '/jobs', pathname: '/jobs/edit/123', navigate: navigateSpy });
 
-    expect(navigateCalls).to.be.empty;
-    expect(eventDetail).to.deep.include({ target: '/jobs' });
+    expect(navigateCalls).toHaveLength(0);
+    expect(eventDetail).toMatchObject({ target: '/jobs' });
 
     window.removeEventListener('jobNavigationRequest', listener);
   });
@@ -51,18 +47,14 @@ describe('Navigation onSelect behaviour', () => {
     const navigateCalls = [];
     const navigateSpy = (path) => navigateCalls.push(path);
 
-    const { navigationSelectHandler } = await esmock(navLogicPath);
-
     navigationSelectHandler({ target: '/jobs', pathname: '/dashboard', navigate: navigateSpy });
 
-    expect(navigateCalls).to.deep.equal(['/jobs']);
+    expect(navigateCalls).toEqual(['/jobs']);
   });
 
   it('dispatches jobNavigationRequest when HashRouter hash indicates edit page', async () => {
     const navigateCalls = [];
     const navigateSpy = (path) => navigateCalls.push(path);
-
-    const { navigationSelectHandler } = await esmock(navLogicPath);
 
     let eventDetail;
     const listener = (e) => {
@@ -72,8 +64,8 @@ describe('Navigation onSelect behaviour', () => {
 
     navigationSelectHandler({ target: '/jobs', pathname: '/', hash: '#/jobs/edit/abc', navigate: navigateSpy });
 
-    expect(navigateCalls).to.be.empty;
-    expect(eventDetail).to.deep.include({ target: '/jobs' });
+    expect(navigateCalls).toHaveLength(0);
+    expect(eventDetail).toMatchObject({ target: '/jobs' });
 
     window.removeEventListener('jobNavigationRequest', listener);
   });
