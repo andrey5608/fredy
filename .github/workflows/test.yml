@@ -1,4 +1,4 @@
-name: Test
+name: CI
 on:
   push:
     branches: [master]
@@ -8,7 +8,29 @@ on:
     - cron: '0 12 * * *'
 
 jobs:
+  check_source_code:
+    name: Check the source code
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Check formatting
+        run: yarn format:check
+
+      - name: Lint
+        run: yarn lint
+
   test:
+    name: Test
+    needs: check_source_code
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
