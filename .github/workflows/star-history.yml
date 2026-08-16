@@ -8,9 +8,8 @@ name: Star History
 # run does not fail - it falls back to recording the public star count for the day, and the curve
 # keeps growing from there. To get the exact history back in that case, add a fine grained PAT with
 # "Administration: read" on this repository as the STAR_HISTORY_TOKEN secret.
+# Disabled in this fork: manual-only. Star history is an upstream promotional artifact.
 on:
-  schedule:
-    - cron: '17 4 * * 1'
   workflow_dispatch:
 
 permissions:
