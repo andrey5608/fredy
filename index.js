@@ -10,12 +10,20 @@ import { runMigrations } from './lib/services/storage/migrations/migrate.js';
 import { ensureDemoUserExists, ensureAdminUserExists } from './lib/services/storage/userStorage.js';
 import { cleanupDemoAtMidnight } from './lib/services/crons/demoCleanup-cron.js';
 import logger from './lib/services/logger.js';
+import { reloadEnabledFromSettings } from './lib/services/debug/debugLogStorage.js';
 import { initActiveCheckerCron } from './lib/services/crons/listing-alive-cron.js';
 import { initGeocodingCron } from './lib/services/crons/geocoding-cron.js';
 import { getSettings } from './lib/services/storage/settingsStorage.js';
 import SqliteConnection, { computeDbPath } from './lib/services/storage/SqliteConnection.js';
 import { initJobExecutionService } from './lib/services/jobs/jobExecutionService.js';
 import { ensureValidBinary } from './lib/services/ensureValidBinary.js';
+import { removeObsoleteProviders } from './lib/services/providers/providerCleanup.js';
+import { seedDemo, warnOnDefaultAdminPassword } from './lib/services/demo/demoService.js';
+import { initDemoCleanupCron } from './lib/services/crons/demo-cleanup-cron.js';
+import { initSessionCleanupCron } from './lib/services/crons/session-cleanup-cron.js';
+import { initListingRetentionCron } from './lib/services/crons/listing-retention-cron.js';
+import { initPriceTrackingCron } from './lib/services/crons/price-tracking-cron.js';
+import { initTravelTimeCron } from './lib/services/crons/travel-time-cron.js';
 
 // Ensure the CloakBrowser stealth Chromium binary is present and complete before
 // jobs run.  ensureValidBinary() also detects and auto-heals partial extractions
@@ -25,22 +33,45 @@ logger.info('Checking CloakBrowser binary...');
 await ensureValidBinary();
 logger.info('CloakBrowser binary ready.');
 
-//in the config, we store the path of the sqlite file, thus we must check if it is available
-const isConfigAccessible = await checkIfConfigIsAccessible();
-await SqliteConnection.init();
-
-// Load configuration before any other startup steps
-await refreshConfig();
-
-if (!isConfigAccessible) {
+// Configuration comes first, because everything below reads it - SqliteConnection.init() in
+// particular resolves the database directory from `sqlitepath`.
+//
+// This used to run one step later, after SqliteConnection.init(), which made a fresh Docker
+// container unstartable: the image ships no conf/config.json (`.dockerignore` excludes `conf/`, the
+// Dockerfile only creates an empty /conf volume), so the very first read threw ENOENT and the
+// create-with-defaults below never got the chance to run. A source checkout has the file committed,
+// which is why this only ever showed up in containers.
+if (!(await checkIfConfigIsAccessible())) {
   logger.error('Configuration exists, but is not accessible. Please check the file permission');
   process.exit(1);
 }
 
-// Run DB migrations once at startup and block until finished
-await runMigrations();
+try {
+  await refreshConfig();
+} catch (error) {
+  logger.error(error.message, error.cause ?? error);
+  process.exit(1);
+}
+
+await SqliteConnection.init();
+
+// Run DB migrations once at startup and block until finished. A failure here is fatal: continuing
+// would start the API and the schedulers against a schema that is missing the failed migration and
+// everything after it.
+try {
+  await runMigrations();
+} catch (err) {
+  logger.error('Database migration failed. Refusing to start.', err.cause ?? err);
+  process.exit(1);
+}
 
 const settings = await getSettings();
+
+// Restore the persisted on/off flag for opt-in DB log capture so it survives a
+// Fredy restart. reloadEnabledFromSettings() also (un)wires the logger sink based
+// on the restored flag, so the logger hot path stays cost-free when nobody enabled
+// the feature.
+await reloadEnabledFromSettings();
 
 // Ensure the sqlite directory exists before loading anything else (based on config.sqlitepath)
 const { dir: sqliteDir } = await computeDbPath();
@@ -50,6 +81,11 @@ if (!fs.existsSync(sqliteDir)) {
 
 // Load provider modules once at startup
 const providers = await getProviders();
+
+// A provider that was deleted from lib/provider still lives on in the DB (in the provider config
+// of existing jobs and in the listings it found). Those leftovers can never be scraped or
+// re-checked again, so they are pruned before anything starts working with jobs or listings.
+removeObsoleteProviders(providers);
 
 similarityCache.initSimilarityCache();
 similarityCache.startSimilarityCacheReloader();
@@ -65,13 +101,27 @@ if (settings.demoMode) {
   cleanupDemoAtMidnight();
 }
 
-ensureAdminUserExists();
-ensureDemoUserExists();
+await ensureAdminUserExists();
+await ensureDemoUserExists();
+
+// A demo instance must always present a working Fredy: the demo job is created on the first
+// start and repaired on every later one, so a drifted config can never leave the demo empty.
+await seedDemo(providers);
+await warnOnDefaultAdminPassword();
 //do not wait for this to finish, let it run in the background
 initActiveCheckerCron();
 initGeocodingCron();
+await initDemoCleanupCron();
+await initSessionCleanupCron();
+await initListingRetentionCron();
+// Schedules only. Unlike the others this one is never run on start: it renders a browser page per
+// listing, and a restart is the worst moment to begin doing that.
+initPriceTrackingCron();
+// Same reasoning: schedule only. The sweep talks to a community routing service, and hammering it
+// every time an instance restarts is exactly the behaviour their usage policy asks projects to avoid.
+initTravelTimeCron();
 
 logger.info(`Started Fredy successfully. Ui can be accessed via http://localhost:${settings.port}`);
 
 // Initialize the lean Job Execution Service (schedules and bus listeners)
-initJobExecutionService({ providers, settings, intervalMs: INTERVAL });
+initJobExecutionService({ providers, intervalMs: INTERVAL });

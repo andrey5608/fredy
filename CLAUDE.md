@@ -46,7 +46,7 @@ index.js (startup)
   ├── runMigrations()
   ├── getProviders()            # lazily imports lib/provider/*.js
   ├── similarityCache.init()    # preloads hash cache from DB
-  ├── api.js                    # starts restana HTTP server
+  ├── api.js                    # starts fastify HTTP server
   └── initJobExecutionService() # registers event-bus listeners + starts scheduler
 
 scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
@@ -68,13 +68,28 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
 
 **Providers** (`lib/provider/*.js`) - each module exports:
 - `metaInformation` - `{ id, name, baseUrl }`
-- `config` - `ProviderConfig` with `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, `filter()`, optional `getListings()`, `fetchDetails()`, `activeTester()`
-- `init(sourceConfig, blacklist)` - called before each job run; providers are **stateful modules** holding mutable `url` and `appliedBlackList` at module scope
+- `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activeTester()`. `url` is `null` here and there is no bound `filter`.
+- `createConfig(sourceConfig, blacklist)` - returns a **fresh** `ProviderConfig` per job run: the template plus this run's `url`, `enabled`, and a `filter` closed over this run's blacklist.
+
+Providers are **stateless**. Nothing run-specific may live at module scope: two jobs can execute
+concurrently (a manual run started while the scheduler is working), and shared mutable state let
+the second job overwrite the first one's URL and blacklist mid-run, storing listings under the
+wrong job. The same rule is why the Cheerio parser builds its document inside `parse()` instead of
+keeping a module-level `$`.
 
 **Notification adapters** (`lib/notification/adapter/*.js`) - each exports:
 - `config` - `{ id, name, description, fields }` (drives the UI form)
 - `send({ serviceName, newListings, notificationConfig, jobKey, baseUrl })`
 - Loaded dynamically at startup via `fs.readdirSync`
+
+Field definitions carry two optional flags that the UI and the API read declaratively, so neither
+needs per-adapter code:
+- `secret: true` - a credential. Never serialised to anyone who may not edit the channel, and
+  masked in the form. Every token, password, API key and webhook URL must carry it.
+- `target: true` - the one field naming the destination. Drives the "Destination" column.
+
+An adapter *configuration* is separate from the adapter itself: it is a row in `configured_adapter`
+("a notification channel" in the UI) that many jobs can reference.
 
 ### Key services
 
@@ -82,7 +97,8 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
 |---|---|---|
 | Event bus | `lib/services/events/event-bus.js` | Plain `EventEmitter`; events: `jobs:runAll`, `jobs:runOne`, `jobs:status` |
 | SSE broker | `lib/services/sse/sse-broker.js` | Per-userId `Set<ServerResponse>`; heartbeat every 25s; pushes job status to UI |
-| Similarity cache | `lib/services/similarity-check/` | In-memory SHA-256 Set; refreshes hourly; cross-provider dedup by title+price+address |
+| Similarity cache | `lib/services/similarity-check/` | In-memory SHA-256 Set; refreshes hourly; per-job cross-provider dedup by title+price+address |
+| Notification channels | `lib/services/storage/configuredAdapterStorage.js` | Saved adapter configurations (`configured_adapter`). Jobs store `[{configuredAdapterId}]`; `jobStorage` hydrates those back into `{id, name, fields}` on every read, so the pipeline never sees the indirection. Who may use vs. edit a channel: `lib/services/security/channelAccess.js` |
 | SqliteConnection | `lib/services/storage/SqliteConnection.js` | Singleton, WAL mode; `execute()`, `query()`, `withTransaction()` |
 | Migrations | `lib/services/storage/migrations/` | Numbered JS files each exporting `up(db)`; checksum-tracked in `schema_migrations` |
 | Extractor | `lib/services/extractor/` | Orchestrates Puppeteer + Cheerio; shared browser instance per job |

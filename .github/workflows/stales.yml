@@ -1,8 +1,8 @@
 name: Close stale issues and PRs
 
+# Disabled in this fork: manual-only. Community issue/PR triage is an upstream concern.
 on:
-  schedule:
-    - cron: '0 0 * * *' # Daily
+  workflow_dispatch:
 
 jobs:
   stale:

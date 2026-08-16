@@ -17,17 +17,32 @@ export const getGeocoordinatesByAddress = (any) => {
   return null;
 };
 
+let userSettings = null;
+export function setUserSettings(settings) {
+  userSettings = settings;
+}
 export function getUserSettings(userId) {
-  return null;
+  return userSettings;
 }
 
 export async function getSettings() {
   return { baseUrl: '' };
 }
 
-export const updateListingDistance = (id, distance) => {
+export function getAddresses(settings) {
+  if (Array.isArray(settings?.home_addresses)) return settings.home_addresses;
+  if (settings?.home_address?.coords) return [{ label: 'Home', ...settings.home_address }];
+  return [];
+}
+
+export const updateListingDistances = (id, distances) => {
   // noop
 };
+/**
+ * The real one reads the stored journeys back onto the listings after a sweep. A test that wants
+ * travel times puts them on the listing itself, so here this only has to leave them alone.
+ */
+export const attachTravelTimes = (listings) => listings;
 export const deletedIds = [];
 export const deleteListingsById = (ids) => {
   deletedIds.push(...ids);
