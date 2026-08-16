@@ -4,27 +4,31 @@
  */
 
 import { Button, Tooltip } from '@douyinfe/semi-ui-19';
-import {
-  IconBriefcase,
-  IconDelete,
-  IconLink,
-  IconMapPin,
-  IconStar,
-  IconStarStroked,
-  IconEyeOpened,
-} from '@douyinfe/semi-icons';
+import { IconBriefcase, IconDelete, IconMapPin, IconStar, IconStarStroked, IconEyeOpened } from '@douyinfe/semi-icons';
 import no_image from '../../assets/no_image.png';
 import { formatEuroPrice } from '../../services/price/priceService.js';
 import * as timeService from '../../services/time/timeService.js';
 import StatusControl from '../listings/StatusControl.jsx';
+import ExternalListingLink from '../listings/ExternalListingLink.jsx';
+import AffordabilityChip from '../listings/AffordabilityChip.jsx';
+import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
+import CommuteBadge from '../transit/CommuteBadge.jsx';
 
 import './ListingsTable.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 
 /**
- * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onStatusChange: Function }} props
+ * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, isHiddenView?: boolean, onStatusChange: Function }} props
  */
-const ListingsTable = ({ listings, onWatch, onNavigate, onDelete, onStatusChange }) => {
+const ListingsTable = ({
+  listings,
+  onWatch,
+  onNavigate,
+  onDelete,
+  onRestore,
+  isHiddenView = false,
+  onStatusChange,
+}) => {
   const t = useTranslation();
   const locale = useLocale();
   return (
@@ -55,7 +59,19 @@ const ListingsTable = ({ listings, onWatch, onNavigate, onDelete, onStatusChange
           </div>
 
           <div className="listingsTable__row__price">
-            {item.price ? formatEuroPrice(item.price) : <span className="listingsTable__row__empty">---</span>}
+            {item.price ? (
+              <>
+                {formatEuroPrice(item.price)}
+                <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
+                <PriceChangeBadge
+                  price={item.price}
+                  previousPrice={item.previous_price}
+                  changedAt={item.price_changed_at}
+                />
+              </>
+            ) : (
+              <span className="listingsTable__row__empty">---</span>
+            )}
           </div>
 
           <div className="listingsTable__row__address">
@@ -67,6 +83,9 @@ const ListingsTable = ({ listings, onWatch, onNavigate, onDelete, onStatusChange
             ) : (
               <span className="listingsTable__row__empty">---</span>
             )}
+            {/* Under the address rather than in a column of its own: it is the same question, and a
+                column would be empty for every listing that has not been routed yet. */}
+            <CommuteBadge travelTimes={item.travelTimes} jobId={item.job_id} />
           </div>
 
           <div className="listingsTable__row__meta">
@@ -76,7 +95,11 @@ const ListingsTable = ({ listings, onWatch, onNavigate, onDelete, onStatusChange
 
           <div className="listingsTable__row__date">{timeService.format(item.created_at, false, locale)}</div>
 
-          <div className="listingsTable__row__actions" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="listingsTable__row__actions"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
             <StatusControl
               status={item.status?.status ?? null}
               compact
@@ -99,23 +122,12 @@ const ListingsTable = ({ listings, onWatch, onNavigate, onDelete, onStatusChange
                 {item.isWatched === 1 ? <IconStar /> : <IconStarStroked />}
               </button>
             </Tooltip>
-            <Tooltip content={t('listings.tooltipOriginalListing')}>
-              <Button
-                size="small"
-                icon={<IconLink />}
-                style={{ color: '#60a5fa' }}
-                theme="borderless"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(item.link, '_blank');
-                }}
-              />
-            </Tooltip>
+            <ExternalListingLink href={item.link} label={t('listings.tooltipOriginalListing')} />
             <Tooltip content={t('listings.tooltipViewInFredy')}>
               <Button
                 size="small"
                 icon={<IconEyeOpened />}
-                style={{ color: '#34d399' }}
+                style={{ color: '#4bab86' }}
                 theme="borderless"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -123,18 +135,38 @@ const ListingsTable = ({ listings, onWatch, onNavigate, onDelete, onStatusChange
                 }}
               />
             </Tooltip>
-            <Tooltip content={t('listings.tooltipRemove')}>
-              <Button
-                size="small"
-                icon={<IconDelete />}
-                style={{ color: '#fb7185' }}
-                theme="borderless"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(item.id);
-                }}
-              />
-            </Tooltip>
+            {isHiddenView ? (
+              <Tooltip content={t('listings.tooltipUndelete')}>
+                <Button
+                  size="small"
+                  icon={
+                    <span className="listingsTable__strike" aria-hidden="true">
+                      <IconDelete />
+                    </span>
+                  }
+                  style={{ color: '#4bab86' }}
+                  theme="borderless"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRestore?.(item.id);
+                  }}
+                  aria-label={t('listings.tooltipUndelete')}
+                />
+              </Tooltip>
+            ) : (
+              <Tooltip content={t('listings.tooltipRemove')}>
+                <Button
+                  size="small"
+                  icon={<IconDelete />}
+                  style={{ color: '#d4707c' }}
+                  theme="borderless"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(item.id);
+                  }}
+                />
+              </Tooltip>
+            )}
           </div>
         </div>
       ))}

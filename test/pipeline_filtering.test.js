@@ -3,16 +3,17 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { expect } from 'vitest';
-import { mockFredy } from './utils.js';
+import { afterEach, expect, vi } from 'vitest';
+import { mockFredy, sseEvents } from './utils.js';
 import * as mockStore from './mocks/mockStore.js';
+import { get as getLastNotification } from './mocks/mockNotification.js';
 
 describe('Issue reproduction: listings filtered by similarity or area should be marked as manually deleted', () => {
   it('should call deleteListingsById when listings are filtered by similarity', async () => {
     const Fredy = await mockFredy();
 
     const mockSimilarityCache = {
-      checkAndAddEntry: () => true, // always similar
+      checkAndAddEntry: vi.fn(() => true), // always similar
     };
 
     const providerConfig = {
@@ -44,6 +45,38 @@ describe('Issue reproduction: listings filtered by similarity or area should be 
     }
 
     expect(mockStore.deletedIds).toContain('1');
+    expect(mockSimilarityCache.checkAndAddEntry).toHaveBeenCalledWith({
+      jobId: 'test-job',
+      title: 'test',
+      address: 'addr',
+      price: '100',
+    });
+  });
+
+  it('should pass the shared browser to a custom getListings implementation', async () => {
+    const Fredy = await mockFredy();
+    const browser = { connected: true };
+    const getListings = vi.fn().mockResolvedValue([]);
+    const providerConfig = {
+      url: 'http://example.com',
+      getListings,
+      normalize: (listing) => listing,
+      filter: () => true,
+      crawlFields: {},
+      requiredFieldNames: [],
+    };
+    const mockedJob = {
+      id: 'custom-get-listings-browser',
+      notificationAdapter: null,
+      specFilter: null,
+      spatialFilter: null,
+    };
+
+    const fredy = new Fredy(providerConfig, mockedJob, 'custom-provider', {}, browser);
+    await fredy.execute();
+
+    expect(getListings).toHaveBeenCalledWith('http://example.com', browser);
+    expect(getListings.mock.contexts[0]).toBe(fredy);
   });
 
   it('should call deleteListingsById when listings are filtered by area', async () => {
@@ -111,5 +144,279 @@ describe('Issue reproduction: listings filtered by similarity or area should be 
     }
 
     expect(mockStore.deletedIds).toContain('2');
+  });
+});
+
+describe('Blacklist is re-applied after detail enrichment', () => {
+  afterEach(() => {
+    mockStore.setUserSettings(null);
+  });
+
+  it('filters out a listing whose blacklisted term only appears in the enriched description', async () => {
+    const Fredy = await mockFredy();
+    const providerId = 'test-provider';
+
+    mockStore.setUserSettings({
+      provider_details: [providerId],
+      blacklist_filter_on_provider_details: true,
+    });
+
+    const mockSimilarityCache = {
+      checkAndAddEntry: () => false,
+    };
+
+    const blacklist = ['allkauf'];
+
+    // The search results page returns a clean snippet (no blacklisted term).
+    // fetchDetails simulates loading the full detail page and discovers the
+    // blacklisted term hidden deep in the description.
+    const providerConfig = {
+      url: 'http://example.com',
+      getListings: () =>
+        Promise.resolve([
+          {
+            id: 'kept',
+            title: 'Nice house',
+            address: 'Some street',
+            price: '500000',
+            link: 'http://example.com/kept',
+            description: 'Cozy home with garden',
+          },
+          {
+            id: 'blacklisted',
+            title: 'Eleganz trifft Raumkomfort',
+            address: 'Other street',
+            price: '600000',
+            link: 'http://example.com/blacklisted',
+            description: 'Eleganz trifft Raumkomfort',
+          },
+        ]),
+      normalize: (l) => l,
+      filter: (l) => {
+        const text = `${l.title ?? ''} ${l.description ?? ''}`.toLowerCase();
+        return !blacklist.some((term) => text.includes(term));
+      },
+      fetchDetails: (listing) => {
+        if (listing.id === 'blacklisted') {
+          return Promise.resolve({
+            ...listing,
+            description: 'Mit allkauf Haus wird dein Traum vom Eigenheim wahr.',
+          });
+        }
+        return Promise.resolve(listing);
+      },
+      crawlFields: {
+        id: 'id',
+        title: 'title',
+        address: 'address',
+        price: 'price',
+        link: 'link',
+        description: 'description',
+      },
+      requiredFieldNames: ['id', 'title', 'address', 'price', 'link', 'description'],
+    };
+
+    const mockedJob = {
+      id: 'blacklist-test-job',
+      notificationAdapter: null,
+      specFilter: null,
+      spatialFilter: null,
+    };
+
+    const fredy = new Fredy(providerConfig, mockedJob, providerId, mockSimilarityCache, undefined);
+
+    const result = await fredy.execute();
+
+    expect(result).toBeInstanceOf(Array);
+    const ids = result.map((l) => l.id);
+    expect(ids).toContain('kept');
+    expect(ids).not.toContain('blacklisted');
+
+    const notification = getLastNotification();
+    const notifiedIds = (notification?.payload ?? []).map((p) => p.id);
+    expect(notifiedIds).not.toContain('blacklisted');
+  });
+
+  it('short-circuits the pipeline when all listings get blacklisted after enrichment', async () => {
+    const Fredy = await mockFredy();
+    const providerId = 'all-blacklisted-provider';
+
+    mockStore.setUserSettings({
+      provider_details: [providerId],
+      blacklist_filter_on_provider_details: true,
+    });
+
+    const mockSimilarityCache = {
+      checkAndAddEntry: () => false,
+    };
+
+    const blacklist = ['allkauf'];
+
+    const providerConfig = {
+      url: 'http://example.com',
+      getListings: () =>
+        Promise.resolve([
+          {
+            id: 'only',
+            title: 'Eleganz trifft Raumkomfort',
+            address: 'Some street',
+            price: '700000',
+            link: 'http://example.com/only',
+            description: 'Eleganz trifft Raumkomfort',
+          },
+        ]),
+      normalize: (l) => l,
+      filter: (l) => {
+        const text = `${l.title ?? ''} ${l.description ?? ''}`.toLowerCase();
+        return !blacklist.some((term) => text.includes(term));
+      },
+      fetchDetails: (listing) =>
+        Promise.resolve({
+          ...listing,
+          description: 'Mit allkauf Haus wird dein Traum vom Eigenheim wahr.',
+        }),
+      crawlFields: {
+        id: 'id',
+        title: 'title',
+        address: 'address',
+        price: 'price',
+        link: 'link',
+        description: 'description',
+      },
+      requiredFieldNames: ['id', 'title', 'address', 'price', 'link', 'description'],
+    };
+
+    const mockedJob = {
+      id: 'all-blacklisted-job',
+      notificationAdapter: null,
+      specFilter: null,
+      spatialFilter: null,
+    };
+
+    const fredy = new Fredy(providerConfig, mockedJob, providerId, mockSimilarityCache, undefined);
+
+    // Should resolve to undefined (NoNewListingsWarning is caught in _handleError).
+    const result = await fredy.execute();
+    expect(result).toBeUndefined();
+  });
+
+  it('does NOT re-filter when blacklist_filter_on_provider_details is disabled', async () => {
+    const Fredy = await mockFredy();
+    const providerId = 'opt-out-provider';
+
+    // provider_details enabled (so fetchDetails runs) but blacklist re-filter NOT enabled.
+    mockStore.setUserSettings({
+      provider_details: [providerId],
+      blacklist_filter_on_provider_details: false,
+    });
+
+    const mockSimilarityCache = {
+      checkAndAddEntry: () => false,
+    };
+
+    const blacklist = ['allkauf'];
+
+    const providerConfig = {
+      url: 'http://example.com',
+      getListings: () =>
+        Promise.resolve([
+          {
+            id: 'leaks-through',
+            title: 'Eleganz trifft Raumkomfort',
+            address: 'Other street',
+            price: '600000',
+            link: 'http://example.com/leaks-through',
+            description: 'Eleganz trifft Raumkomfort',
+          },
+        ]),
+      normalize: (l) => l,
+      filter: (l) => {
+        const text = `${l.title ?? ''} ${l.description ?? ''}`.toLowerCase();
+        return !blacklist.some((term) => text.includes(term));
+      },
+      fetchDetails: (listing) =>
+        Promise.resolve({
+          ...listing,
+          description: 'Mit allkauf Haus wird dein Traum vom Eigenheim wahr.',
+        }),
+      crawlFields: {
+        id: 'id',
+        title: 'title',
+        address: 'address',
+        price: 'price',
+        link: 'link',
+        description: 'description',
+      },
+      requiredFieldNames: ['id', 'title', 'address', 'price', 'link', 'description'],
+    };
+
+    const mockedJob = {
+      id: 'opt-out-job',
+      notificationAdapter: null,
+      specFilter: null,
+      spatialFilter: null,
+    };
+
+    const fredy = new Fredy(providerConfig, mockedJob, providerId, mockSimilarityCache, undefined);
+
+    const result = await fredy.execute();
+
+    // Listing leaks through because user has not opted in to the stricter check.
+    expect(result).toBeInstanceOf(Array);
+    expect(result.map((l) => l.id)).toContain('leaks-through');
+  });
+});
+
+describe('Live reload triggers via SSE', () => {
+  afterEach(() => {
+    sseEvents.length = 0;
+  });
+
+  it('emits a listings:new event via SSE when a new listing is saved', async () => {
+    sseEvents.length = 0;
+    const Fredy = await mockFredy();
+
+    const mockSimilarityCache = {
+      checkAndAddEntry: () => false, // unique listing
+    };
+
+    const providerConfig = {
+      url: 'http://example.com',
+      getListings: () =>
+        Promise.resolve([
+          {
+            id: 'brand-new-listing',
+            title: 'Cool Apartment',
+            address: 'Awesome Ave',
+            price: '500',
+            link: 'http://example.com/new',
+          },
+        ]),
+      normalize: (l) => l,
+      filter: () => true,
+      crawlFields: { id: 'id', title: 'title', address: 'address', price: 'price', link: 'link' },
+      requiredFieldNames: ['id', 'title', 'address', 'price', 'link'],
+    };
+
+    const mockedJob = {
+      id: 'live-reload-job',
+      notificationAdapter: null,
+      specFilter: null,
+      spatialFilter: null,
+    };
+
+    const fredy = new Fredy(providerConfig, mockedJob, 'live-reload-provider', mockSimilarityCache, undefined);
+
+    await fredy.execute();
+
+    expect(sseEvents).toHaveLength(1);
+    expect(sseEvents[0]).toEqual({
+      userId: 'user1',
+      event: 'listings:new',
+      data: {
+        jobId: 'live-reload-job',
+        count: 1,
+      },
+    });
   });
 });

@@ -1,0 +1,1160 @@
+
+            <nav aria-label="Schnellnavigation">
+    <ul class="list-none font-semibold p-0 bg-white text-neutral-900">
+        <li class="sr-only focus-within:not-sr-only w-full text-center">
+            <!-- skips to short links on click -> see skip-nav.js -->
+            <button class="p-3 inline-block" id="skip-nav-skipToShortLinks">Navigation</button>
+        </li>
+                        <li class="sr-only focus-within:not-sr-only w-full text-center">
+            <a class="p-3 inline-block" href="/login">Login</a>
+        </li>
+                <li class="sr-only focus-within:not-sr-only w-full text-center">
+            <!-- skips to h1 on click -> see skip-nav.js -->
+            <button class="p-3 inline-block" id="skip-nav-skipTo-h1">Inhaltsbereich</button>
+        </li>
+        <li class="sr-only focus-within:not-sr-only w-full text-center">
+            <!-- skips to footer on click -> see skip-nav.js -->
+            <button class="p-3 inline-block" id="skip-nav-skipTo-footer">Fußzeile</button>
+        </li>
+    </ul>
+</nav>
+
+      <noscript>
+            <p>
+                  <img src="https://matomo.wfb-bremen.de/matomo.php?idsite=20&amp;rec=1"
+                        style="border:0;"
+                        alt="" />
+            </p>
+      </noscript>
+      <div class="fixed inset-0 -z-10 ios-no-heavy-bg">
+            <div class="bg-circle-red"></div>
+            <div class="bg-circle-orange"></div>
+            <div class="bg-circle-purple"></div>
+      </div>
+
+      <header class="w-full py-8 mb-8">
+  <div class="container flex justify-between items-center">
+    <a href="/" class="group">
+      <img src="https://schwarzesbrett.bremen.de/images/logo.svg" alt="Logo Schwarzes Brett Bremen" class="dark:hidden w-54 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-blue-600">
+      <img src="https://schwarzesbrett.bremen.de/images/logo_dark.svg" alt="Logo Schwarzes Brett Bremen" class="hidden dark:block w-54 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-blue-600">
+    </a>
+    <!-- shows menu on click -> see header-nav.js -->
+<button id="openmenu" class="lg:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none bg-accent text-white h-14 w-14 rounded-2xl" aria-controls="short-links">
+    <span class="bg-white block h-[3px] rounded mx-2"></span>
+    <span class="bg-white block h-[3px] rounded ml-4 mr-2 my-2"></span>
+    <span class="bg-white block h-[3px] rounded ml-3 mr-2"></span>
+</button>
+
+<nav id="short-links" data-hide-class="hidden" data-translate-class="translate-x-full" class="hidden md:block fixed z-[2500000] lg:static top-0 right-0 bottom-0 bg-white dark:bg-neutral-700 dark:lg:bg-transparent lg:bg-transparent p-8 lg:p-0 shadow-2xl lg:shadow-none min-w-3xs md:min-w-xs transform-none translate-x-full lg:block lg:translate-none transition-transform ease-out duration-300 overflow-auto" aria-expanded="false">
+    <!-- closes menu on click -> see header-nav.js -->
+    <button id="closemenu" class="mb-6 lg:hidden button-basics" aria-controls="short-links">
+        <span class="fas fa-close"></span>
+        <span class="button-underline">
+            Menü schließen
+        </span>
+    </button>
+
+    <ul class="lg:flex items-center gap-5 xl:gap-8 pl-0 list-none">
+                <li class="mb-6 lg:mb-0">
+            <a class="text-base font-semibold focus:underline hover:underline" href="/verkauf-und-angebote">
+                                <span>Angebote</span>
+            </a>
+        </li>
+                <li class="mb-6 lg:mb-0">
+            <a class="text-base font-semibold focus:underline hover:underline" href="/kauf-und-gesuche">
+                                <span>Gesuche</span>
+            </a>
+        </li>
+                <li class="mb-6 lg:mb-0">
+            <a class="text-base font-semibold focus:underline hover:underline" href="/kontakte-knuepfen">
+                                <span>Kontakte knüpfen</span>
+            </a>
+        </li>
+                <li class="mb-6 lg:mb-0">
+            <a class="text-base font-semibold focus:underline hover:underline" href="/create">
+                                <span>Inserieren</span>
+            </a>
+        </li>
+                <li class="mb-6 lg:mb-0">
+            <a class="text-base font-semibold focus:underline hover:underline" href="/faq">
+                                <span>FAQ</span>
+            </a>
+        </li>
+                <li class="mb-6 lg:mb-0">
+            <a class="text-base font-semibold focus:underline hover:underline" href="/favorites">
+                                <span class="hidden lg:inline-block">
+                    <span class="fas fa-heart"></span>
+                </span>
+                                <span>Merkliste</span>
+            </a>
+        </li>
+        
+        <li class="absolute lg:static top-13 right-8">
+            <button id="theme-toggle" class="cursor-pointer text-xl" aria-label="Darkmode aktivieren"><span class="far fa-moon"></span></button>
+        </li>
+
+                <li class="mb-6 lg:mb-0">
+            <a href="/login" class="button-basics min-w-0">
+            <span class="fas fa-user"></span>
+        <span class="button-underline">
+        Login
+    </span>
+</a>
+        </li>
+            </ul>
+
+    
+</nav>
+
+  </div>
+</header>
+      <div wire:snapshot="{&quot;data&quot;:{&quot;message&quot;:&quot;&quot;,&quot;type_class&quot;:&quot;&quot;},&quot;memo&quot;:{&quot;id&quot;:&quot;grg7BCCfbvCoNsbpwmS5&quot;,&quot;name&quot;:&quot;notification&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;3d21f9e6e8cc71388cb6efb9082c2e091daf50fba3d1d9aaf9dd36b02a38680c&quot;}" wire:effects="{&quot;listeners&quot;:[&quot;notify&quot;]}" wire:id="grg7BCCfbvCoNsbpwmS5" id="notification-container" role="alert">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>
+
+
+      <main wire:snapshot="{&quot;data&quot;:{&quot;navigation&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Navigation&quot;,&quot;key&quot;:2,&quot;s&quot;:&quot;mdl&quot;}],&quot;category&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Category&quot;,&quot;key&quot;:38,&quot;s&quot;:&quot;mdl&quot;}],&quot;navigation_url&quot;:&quot;verkauf-und-angebote&quot;,&quot;category_url&quot;:&quot;mietobjekte&quot;,&quot;price_tag&quot;:&quot;Kaltmiete&quot;,&quot;options_sorting&quot;:[{&quot;date_desc&quot;:&quot;Datum absteigend&quot;,&quot;date_asc&quot;:&quot;Datum aufsteigend&quot;,&quot;price_desc&quot;:&quot;Preis absteigend&quot;,&quot;price_asc&quot;:&quot;Preis aufsteigend&quot;},{&quot;s&quot;:&quot;arr&quot;}],&quot;search_query&quot;:&quot;&quot;,&quot;subcategories&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;sort&quot;:&quot;date_desc&quot;,&quot;district&quot;:&quot;Keine Auswahl&quot;,&quot;filters&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;price_filters&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;hideImages&quot;:false,&quot;paginators&quot;:[{&quot;page&quot;:1},{&quot;s&quot;:&quot;arr&quot;}]},&quot;memo&quot;:{&quot;id&quot;:&quot;fKxbtryENQHt96wFcCkq&quot;,&quot;name&quot;:&quot;advertisements.advertisements-index&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:{&quot;verkauf-und-angebote&quot;:[&quot;section&quot;,&quot;IW2mcK7CXgZIsN5alaKa&quot;],&quot;lw-2683678462-1&quot;:[&quot;div&quot;,&quot;afIeL8GDc07KGZ2PHdLV&quot;],&quot;lw-2683678462-2&quot;:[&quot;div&quot;,&quot;iHO1vuOoMzF7dHPs6W4Z&quot;],&quot;lw-2683678462-3&quot;:[&quot;div&quot;,&quot;7R7tcMYXXiU0GsZF0dFc&quot;],&quot;favorite-28903&quot;:[&quot;div&quot;,&quot;CKGaNlLG5654bhayHAPi&quot;],&quot;favorite-28942&quot;:[&quot;div&quot;,&quot;DL1nFwszQFnUUgVc7URf&quot;],&quot;favorite-29143&quot;:[&quot;div&quot;,&quot;dXvzsCwTCfhZ3w5xOBV0&quot;],&quot;favorite-28828&quot;:[&quot;div&quot;,&quot;0mGyf6Mlkax7v96awUPA&quot;],&quot;favorite-29137&quot;:[&quot;div&quot;,&quot;lK8ICZix9Dlga5L1Crbh&quot;],&quot;favorite-22886&quot;:[&quot;div&quot;,&quot;k6YcbNV3NE190YzMWfTc&quot;],&quot;favorite-28435&quot;:[&quot;div&quot;,&quot;2BtnFVIwZadTIEbNzzYn&quot;],&quot;favorite-28558&quot;:[&quot;div&quot;,&quot;0uOxz1shWX21LyrM7mVn&quot;],&quot;favorite-28684&quot;:[&quot;div&quot;,&quot;5w2SBg6rS2L76kAzelB0&quot;],&quot;favorite-28783&quot;:[&quot;div&quot;,&quot;hZF0bmVE9nPHUNTuDKQo&quot;]},&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;b50ac64bc582656a04db698f7da8f604b676dbab695acd84f444d99faf00b453&quot;}" wire:effects="{&quot;url&quot;:{&quot;search_query&quot;:{&quot;as&quot;:&quot;search_query&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;subcategories&quot;:{&quot;as&quot;:&quot;subcategories&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;sort&quot;:{&quot;as&quot;:&quot;sort&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;district&quot;:{&quot;as&quot;:&quot;district&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;filters&quot;:{&quot;as&quot;:&quot;filters&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;price_filters&quot;:{&quot;as&quot;:&quot;price_filters&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;hideImages&quot;:{&quot;as&quot;:&quot;hideImages&quot;,&quot;use&quot;:&quot;replace&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null},&quot;paginators.page&quot;:{&quot;as&quot;:&quot;page&quot;,&quot;use&quot;:&quot;push&quot;,&quot;alwaysShow&quot;:false,&quot;except&quot;:null}},&quot;listeners&quot;:[&quot;filterSubcategories&quot;,&quot;searchQueryChanged&quot;,&quot;rangeFilterChanged&quot;,&quot;keywordFilterChanged&quot;]}" wire:id="fKxbtryENQHt96wFcCkq">
+     <section class="container mb-12">
+         <style>
+    [data-banner="billboard"] { min-height: 150px; }
+    @media (min-width: 1024px) { [data-banner="billboard"] { min-height: 250px; } }
+</style>
+
+
+<div class="relative mx-auto flex justify-center items-center overflow-visible flex mb-10 lg:mb-20" data-banner-placement="" data-banner="billboard">
+
+    
+    <div data-yieldlove="billboard"></div>
+
+    
+    <!--[if BLOCK]><![endif]-->    <a href="https://www.bremen.de/kultur/veranstaltungen#/" target="_blank" rel="noopener noreferrer nofollow" class="hidden lg:flex housead absolute inset-0 justify-center items-center" data-house-ad="">
+        
+        <span>
+            <img src="/storage/house-ads/veranstaltungskalender_970x250.png" alt="Externer Link zu Veranstaltungskalender" width="970" height="250">
+        </span>
+    </a>
+    <!--[if ENDBLOCK]><![endif]-->
+    
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>
+
+
+         <!--[if BLOCK]><![endif]-->    <nav aria-label="Breadcrumbs" class="mb-8">
+        <ol class="flex flex-wrap gap-2 list-none pl-0">
+            <!--[if BLOCK]><![endif]-->                <li class="flex items-center">
+                    <!--[if BLOCK]><![endif]-->                        <a href="https://schwarzesbrett.bremen.de" class="underline hover:text-white hover:bg-accent duration-200">
+                            Start
+                        </a>
+                        <!--[if BLOCK]><![endif]-->                            <span class="ml-2 fas fa-chevron-right"></span>
+                        <!--[if ENDBLOCK]><![endif]-->                    <!--[if ENDBLOCK]><![endif]-->                </li>
+                            <li class="flex items-center">
+                    <!--[if BLOCK]><![endif]-->                        <a href="https://schwarzesbrett.bremen.de/verkauf-und-angebote" class="underline hover:text-white hover:bg-accent duration-200">
+                            Verkauf und Angebote
+                        </a>
+                        <!--[if BLOCK]><![endif]-->                            <span class="ml-2 fas fa-chevron-right"></span>
+                        <!--[if ENDBLOCK]><![endif]-->                    <!--[if ENDBLOCK]><![endif]-->                </li>
+                            <li class="flex items-center">
+                    <!--[if BLOCK]><![endif]-->                        <span aria-current="page">
+                            Mietangebote
+                        </span>
+                    <!--[if ENDBLOCK]><![endif]-->                </li>
+            <!--[if ENDBLOCK]><![endif]-->        </ol>
+    </nav>
+<!--[if ENDBLOCK]><![endif]-->         <h1 id="navigation-title" class="headline-big">
+             Mietangebote
+         </h1>
+         <!--[if BLOCK]><![endif]-->         <div class="prose max-w-none mt-8">Hier könnt ihr Wohnungen, Häuser, Parzellen oder Räumlichkeiten wie Studios in Bremen und Umgebung anbieten.</div>
+         <!--[if ENDBLOCK]><![endif]-->     </section>
+
+     <section wire:snapshot="{&quot;data&quot;:[],&quot;memo&quot;:{&quot;id&quot;:&quot;IW2mcK7CXgZIsN5alaKa&quot;,&quot;name&quot;:&quot;header.categories&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;9254a07238090ac06ac912b8bd754a347250ac8f390284b500f21f9a9638172d&quot;}" wire:effects="[]" wire:id="IW2mcK7CXgZIsN5alaKa" class="container">
+    <!--[if BLOCK]><![endif]-->        <style>
+    [data-banner="leaderboard_wide_1"] { min-height: 150px; }
+    @media (min-width: 1024px) { [data-banner="leaderboard_wide_1"] { min-height: 90px; } }
+</style>
+
+
+<div class="relative mx-auto flex justify-center items-center overflow-visible flex mb-20" data-banner-placement="" data-banner="leaderboard_wide_1">
+
+    
+    <div data-yieldlove="leaderboard_wide_1"></div>
+
+    
+    <!--[if BLOCK]><![endif]-->    <a href="https://www.bremen.de" target="_blank" rel="noopener noreferrer nofollow" class="hidden lg:flex housead absolute inset-0 justify-center items-center" data-house-ad="">
+        
+        <span>
+            <img src="/storage/house-ads/bremen.de_970x90.png" alt="Externer Link zu Bremen.de" width="970" height="90">
+        </span>
+    </a>
+    <!--[if ENDBLOCK]><![endif]-->
+    
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>
+
+
+    <!--[if ENDBLOCK]><![endif]--></section>
+        <section class="app-grid mb-4 container">
+            <div class="col-span-4 md:col-span-8 lg:col-span-12 app-grid items-stretch">
+                <div wire:snapshot="{&quot;data&quot;:{&quot;search_query&quot;:&quot;&quot;,&quot;navigation_title&quot;:&quot;Verkauf und Angebote&quot;,&quot;category_title&quot;:&quot;Mietangebote&quot;,&quot;model&quot;:&quot;&quot;,&quot;large&quot;:false,&quot;label&quot;:&quot;Stichwortsuche in \&quot;Mietangebote\&quot;:&quot;},&quot;memo&quot;:{&quot;id&quot;:&quot;afIeL8GDc07KGZ2PHdLV&quot;,&quot;name&quot;:&quot;header.search&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;bindings&quot;:{&quot;search_query&quot;:&quot;search_query&quot;},&quot;bindingsDirectives&quot;:{&quot;search_query&quot;:&quot;wire:model&quot;},&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;0ddf9a79e3616251d36eaa01855b085fdb7f56467f13775890ee778323766d9d&quot;}" wire:effects="[]" wire:model="$parent.search_query" x-modelable="$wire.search_query" wire:id="afIeL8GDc07KGZ2PHdLV" class="col-span-4 md:col-span-8 lg:col-span-4">
+    <div class="flex flex-col gap-1">
+        <label for="search_query" class="font-semibold">Stichwortsuche in "Mietangebote":</label>
+        <div class="relative text-neutral-900">
+            <span class="mr-2 fas fa-2xl fa-magnifying-glass absolute top-1/2 cursor-pointer hover:opacity-80 left-2" wire:click="$dispatch('search')" wire:keydown.enter="$dispatch('search')">
+            </span>
+            <input aria-label="Stichwortsuche" wire:model="search_query" wire:keydown.enter="$dispatch('search')" type="text" id="search_query" name="search_query" class="bg-white rounded-2xl w-full min-w-42 p-4 pl-14">
+        </div>
+    </div>
+</div>                    <div id="filter-buttons" data-hide-class="hidden" class="lg:h-auto col-span-4 md:col-span-8 flex justify-between items-end flex-wrap gap-4">
+                        <button wire:click="search" class="button-basics">
+                            <span class="button-underline">Filter anwenden</span>
+                        </button>
+                        <div class="flex items-center gap-4">
+    <p><span class="fas fa-check"></span> Angebote</p>
+    <a href="https://schwarzesbrett.bremen.de/kauf-und-gesuche/mietobjekte" class="button-basics">
+    <!--[if BLOCK]><![endif]-->        <span class="far fa-arrows-retweet"></span>
+    <!--[if ENDBLOCK]><![endif]-->    <span class="button-underline">
+        Zu Gesuchen
+    </span>
+</a>
+</div>
+                    </div>
+                    <div id="filter-modal-buttons" data-hide-class="hidden" class="hidden lg:h-0 col-span-4 md:col-span-8 flex justify-between items-end flex-wrap gap-6">
+                        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <button wire:click="search" class="button-basics">
+                            <span class="button-underline">Suchen</span>
+                        </button>
+                        <button @click="openFilterModal()" class="button-basics light">
+                            <span class="fas fa-filter"></span><span class="button-underline">Filter öffnen</span>
+                        </button>
+                        <div class="w-full flex justify-end gap-2 items-center">
+                            <div class="inline-flex items-center">
+                                <div class="checkbox-basics">
+                                    <input id="change-display-mode" type="checkbox" wire:model.live="hideImages" @keyup.enter="changeDisplayMode" class="peer">
+                                    <span class="checkbox-check peer-checked:opacity-100">
+                                        <span class="fa fa-check"></span>
+                                    </span>
+                                </div>
+                            </div>
+                            <label for="change-display-mode" class="cursor-pointer">
+                                <span class="fas fa-image-slash mr-2"></span><span class="button-underline">Bilder ausblenden</span>
+                            </label>
+                        </div>
+                    </div>
+            </div>
+
+            <div id="filter-modal" data-hide-class="hidden" role="dialog" class="hidden fixed inset-0 z-50 flex items-center justify-content bg-black/60 p-4" @keydown.escape.window="closeFilterModal()" aria-modal="true" tabindex="-1">
+                <div class="w-full h-full rounded-2xl bg-white text-neutral-900 p-6 shadow-2xl m-6 relative pt-12">
+                    <div class="flex justify-end absolute top-5 right-5">
+                        <button id="filter-close" @click="closeFilterModal()" aria-label="Schließen" class="cursor-pointer">
+                            <span class="fa fa-xmark text-xl"></span>
+                        </button>
+                    </div>
+                    <div class="w-full h-9/10 overflow-y-scroll">
+                        <div id="filters-in-modal" class="flex flex-col gap-8 lg:mr-18 xl:mr-24"></div>
+                    </div>
+                    <div class="w-full h-1/10 mt-4 flex justify-content">
+                        <div class="w-full flex justify-between items-center">
+                            <button wire:click="search" @click="closeFilterModal()" class="button-basics">
+                                <span class="button-underline">Filter anwenden</span>
+                            </button>
+                            <button class="mt-2 flex gap-1 items-center cursor-pointer group" wire:click="resetFilters" @click="closeFilterModal()">
+                                <span class="fa fa-sm fa-xmark"></span><span class="group-hover:underline group-focus:underline">Zurücksetzen</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-span-4 md:col-span-8 lg:col-span-4 lg:sticky lg:overflow-auto lg:h-[calc(100dvh-1.5rem)] lg:top-3 lg:px-1 lg:-mx-1">
+                <div id="filters" class="flex flex-col gap-8 lg:mr-18 xl:mr-24 lg:mb-8">
+                    <div class="flex flex-col gap-1">
+    <label for="sortby" class="font-semibold">Sortieren nach:</label>
+    <div class="relative bg-white rounded-lg">
+        <select id="sortby" class="bg-transparent rounded-lg w-full p-3 border border-neutral-300 appearance-none relative z-20 text-neutral-900" wire:model="sort">
+            <!--[if BLOCK]><![endif]-->            <option value="date_desc">Datum absteigend</option>
+                        <option value="date_asc">Datum aufsteigend</option>
+                        <option value="price_desc">Preis absteigend</option>
+                        <option value="price_asc">Preis aufsteigend</option>
+            <!--[if ENDBLOCK]><![endif]-->        </select>
+        <span class="fa fa-caret-down absolute top-1/3 right-2 z-10 text-neutral-900"></span>
+     </div>
+</div>                    <div wire:snapshot="{&quot;data&quot;:{&quot;selected_subcategories&quot;:[[],{&quot;s&quot;:&quot;arr&quot;}],&quot;categories&quot;:[[],{&quot;class&quot;:&quot;Illuminate\\Support\\Collection&quot;,&quot;s&quot;:&quot;clctn&quot;}]},&quot;memo&quot;:{&quot;id&quot;:&quot;iHO1vuOoMzF7dHPs6W4Z&quot;,&quot;name&quot;:&quot;header.subcategories&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;bindings&quot;:{&quot;subcategories&quot;:&quot;selected_subcategories&quot;},&quot;bindingsDirectives&quot;:{&quot;subcategories&quot;:&quot;wire:model&quot;},&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;993a7d187e4f38c9a9207ff5b45d55afa7638046dd2029d8013f0babf321dbff&quot;}" wire:effects="[]" wire:model="$parent.subcategories" x-modelable="$wire.selected_subcategories" wire:id="iHO1vuOoMzF7dHPs6W4Z" class="hidden">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>                        <div class="flex flex-col gap-1">
+    <label for="district" class="font-semibold">Stadtteil:</label>
+    <div class="relative bg-white rounded-lg">
+        <select id="district" class="bg-transparent rounded-lg w-full p-3 border border-neutral-300 appearance-none relative z-20 text-neutral-900" wire:model="district">
+            <!--[if BLOCK]><![endif]-->            <option value="Keine Auswahl">Alle</option>
+                        <option value="Keine Angabe">Keine Angabe</option>
+                        <option value="Außerhalb Bremens">Außerhalb Bremens</option>
+                        <option value="Blockland">Blockland</option>
+                        <option value="Blumenthal">Blumenthal</option>
+                        <option value="Borgfeld">Borgfeld</option>
+                        <option value="Burglesum">Burglesum</option>
+                        <option value="Findorff">Findorff</option>
+                        <option value="Gröpelingen">Gröpelingen</option>
+                        <option value="Hemelingen">Hemelingen</option>
+                        <option value="Horn-Lehe">Horn-Lehe</option>
+                        <option value="Huchting">Huchting</option>
+                        <option value="Häfen">Häfen</option>
+                        <option value="Mitte">Mitte</option>
+                        <option value="Neustadt">Neustadt</option>
+                        <option value="Oberneuland">Oberneuland</option>
+                        <option value="Obervieland">Obervieland</option>
+                        <option value="Osterholz">Osterholz</option>
+                        <option value="Schwachhausen">Schwachhausen</option>
+                        <option value="Seehausen">Seehausen</option>
+                        <option value="Strom">Strom</option>
+                        <option value="Vahr">Vahr</option>
+                        <option value="Vegesack">Vegesack</option>
+                        <option value="Walle">Walle</option>
+                        <option value="Woltmershausen">Woltmershausen</option>
+                        <option value="Östliche Vorstadt">Östliche Vorstadt</option>
+                        <option value="Überseehafen">Überseehafen</option>
+            <!--[if ENDBLOCK]><![endif]-->        </select>
+        <span class="fa fa-caret-down absolute top-1/3 right-2 z-10 text-neutral-900"></span>
+     </div>
+</div>
+                        <div class="w-full flex flex-col gap-8 lg:mr-18 xl:mr-24">
+                            <!--[if BLOCK]><![endif]-->                            <!--[if BLOCK]><![endif]-->                            <div>
+                                <!--[if BLOCK]><![endif]--><p class="font-semibold mb-1">Typ:</p><!--[if ENDBLOCK]><![endif]-->                                <div class="flex flex-col gap-1">
+                                    <!--[if BLOCK]><![endif]-->                                    <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Haus" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Haus' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Haus" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Haus</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Wohnung" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Wohnung' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Wohnung" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Wohnung</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Garage" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Garage' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Garage" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Garage</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Stellplatz" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Stellplatz' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Stellplatz" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Stellplatz</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Parzelle" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Parzelle' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Parzelle" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Parzelle</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Hobbyraum" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Hobbyraum' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Hobbyraum" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Hobbyraum</label>
+</div>                                    <!--[if ENDBLOCK]><![endif]-->                                </div>
+                            </div>
+                                                        <div>
+                                <!--[if BLOCK]><![endif]--><p class="font-semibold mb-1">Ausstattung:</p><!--[if ENDBLOCK]><![endif]-->                                <div class="flex flex-col gap-1">
+                                    <!--[if BLOCK]><![endif]-->                                    <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Balkon" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Balkon' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Balkon" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Balkon</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Terrasse" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Terrasse' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Terrasse" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Terrasse</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Garten" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Garten' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Garten" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Garten</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Möbliert" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Möbliert' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Möbliert" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Möbliert</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Unmöbliert" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Unmöbliert' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Unmöbliert" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Unmöbliert</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Einbauküche" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Einbauküche' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Einbauküche" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Einbauküche</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Barrierefrei" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Barrierefrei' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Barrierefrei" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Barrierefrei</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Temporär" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Temporär' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Temporär" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Temporär</label>
+</div>                                                                        <div class="w-full flex gap-2 items-center has-[:disabled]:opacity-60">
+    <div class="inline-flex items-center">
+        <div class="checkbox-basics">
+            <input id="feature_Unbegrenzt" value="" type="checkbox" @keyup.enter="updateCheckbox" class="peer " wire:click="$dispatch('keywordFilterChanged', { title: 'Unbegrenzt' })">
+            <span class="checkbox-check peer-checked:opacity-100">
+                <span class="fa fa-check"></span>
+            </span>
+        </div>
+    </div>
+    <label for="feature_Unbegrenzt" class="cursor-pointer has-[:disabled]:cursor-not-allowed">Unbegrenzt</label>
+</div>                                    <!--[if ENDBLOCK]><![endif]-->                                </div>
+                            </div>
+                            <!--[if ENDBLOCK]><![endif]-->                            <!--[if ENDBLOCK]><![endif]-->
+                            <div class="flex flex-col gap-1">
+                                <p class="font-semibold">Kaltmiete:</p>
+                                <div x-data="{ min: 0 }" class="input-basics flex-row justify-between items-center">
+                                    <label for="price_min">von</label>
+                                    <div class="relative bg-white rounded-lg">
+                                        <input wire:model="price_filters.min" id="price_min" type="number" class="max-w-46">
+                                        <span class="fa fa-eur absolute top-1/3 right-10 z-10 text-neutral-900"></span>
+                                    </div>
+                                </div>
+                                <div class="input-basics flex-row justify-between items-center">
+                                    <label for="price_max">bis</label>
+                                    <div class="relative bg-white rounded-lg">
+                                        <input wire:model="price_filters.max" id="price_max" type="number" class="max-w-46">
+                                        <span class="fa fa-eur absolute top-1/3 right-10 z-10 text-neutral-900"></span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!--[if BLOCK]><![endif]-->                            <!--[if BLOCK]><![endif]-->                            <!--[if BLOCK]><![endif]-->                            <div class="mb-4">
+                                <div wire:snapshot="{&quot;data&quot;:{&quot;id&quot;:&quot;Zimmer&quot;,&quot;title&quot;:&quot;Zimmer&quot;,&quot;filter&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Filter&quot;,&quot;key&quot;:null,&quot;s&quot;:&quot;mdl&quot;}],&quot;min&quot;:null,&quot;max&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;3zkzrLcU3nsLD5z3NRZe&quot;,&quot;name&quot;:&quot;range-input&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;e4937fae280c134a40c6e0d33c5b304b886e30b243d1eb5b3ff4fa662f6924ce&quot;}" wire:effects="[]" wire:id="3zkzrLcU3nsLD5z3NRZe" class="flex flex-col gap-1">
+    <!--[if BLOCK]><![endif]-->        <p class="font-semibold">Zimmer:</p>
+        <div x-data="{ min: 0 }" class="input-basics flex-row justify-between items-center">
+            <label for="Zimmer-min">von</label>
+            <input wire:key="$filter-&gt;title" id="Zimmer-min" step="0.5" min="0" @change="$dispatch('rangeFilterChanged', {title: 'Zimmer', field: 'min', value: $event.target.value})" value="" type="number" class="max-w-46">
+        </div>
+        <div class="input-basics flex-row justify-between items-center">
+            <label for="Zimmer-max">bis</label>
+            <input wire:key="$filter-&gt;title" id="Zimmer-max" step="0.5" min="0" @change="$dispatch('rangeFilterChanged', {title: 'Zimmer', field: 'max', value: $event.target.value})" value="" type="number" class="max-w-46">
+        </div>
+    <!--[if ENDBLOCK]><![endif]--></div>                            </div>
+                            <!--[if ENDBLOCK]><![endif]-->                                                        <!--[if BLOCK]><![endif]-->                            <div class="mb-4">
+                                <div wire:snapshot="{&quot;data&quot;:{&quot;id&quot;:&quot;Quadratmeter&quot;,&quot;title&quot;:&quot;Quadratmeter&quot;,&quot;filter&quot;:[null,{&quot;class&quot;:&quot;App\\Models\\Filter&quot;,&quot;key&quot;:null,&quot;s&quot;:&quot;mdl&quot;}],&quot;min&quot;:null,&quot;max&quot;:null},&quot;memo&quot;:{&quot;id&quot;:&quot;7R7tcMYXXiU0GsZF0dFc&quot;,&quot;name&quot;:&quot;range-input&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;375f395a3e3112e61d32c5ceb59a52fedc958519ab9efbaf8df13c8c354cd2df&quot;}" wire:effects="[]" wire:id="7R7tcMYXXiU0GsZF0dFc" class="flex flex-col gap-1">
+    <!--[if BLOCK]><![endif]-->        <p class="font-semibold">Quadratmeter:</p>
+        <div x-data="{ min: 0 }" class="input-basics flex-row justify-between items-center">
+            <label for="Quadratmeter-min">von</label>
+            <input wire:key="$filter-&gt;title" id="Quadratmeter-min" step="0.5" min="0" @change="$dispatch('rangeFilterChanged', {title: 'Quadratmeter', field: 'min', value: $event.target.value})" value="" type="number" class="max-w-46">
+        </div>
+        <div class="input-basics flex-row justify-between items-center">
+            <label for="Quadratmeter-max">bis</label>
+            <input wire:key="$filter-&gt;title" id="Quadratmeter-max" step="0.5" min="0" @change="$dispatch('rangeFilterChanged', {title: 'Quadratmeter', field: 'max', value: $event.target.value})" value="" type="number" class="max-w-46">
+        </div>
+    <!--[if ENDBLOCK]><![endif]--></div>                            </div>
+                            <!--[if ENDBLOCK]><![endif]-->                            <!--[if ENDBLOCK]><![endif]-->                            <!--[if ENDBLOCK]><![endif]-->                        </div>
+                </div>
+                <div id="filter-buttons-2" data-hide-class="hidden" class="flex flex-col gap-8 lg:mr-18 xl:mr-24">
+                    <div>
+                        <button wire:click="search" class="button-basics">
+                            <span class="button-underline">Filter anwenden</span>
+                        </button>
+                        <button class="mt-2 flex gap-1 items-center cursor-pointer group" wire:click="resetFilters">
+                            <span class="fa fa-sm fa-xmark"></span><span class="group-hover:underline group-focus:underline">Zurücksetzen</span>
+                        </button>
+                    </div>
+                    <style>
+    [data-banner="rectangle_4"] { min-height: 280px; }
+    @media (min-width: 1024px) { [data-banner="rectangle_4"] { min-height: 280px; } }
+</style>
+
+
+<div class="relative mx-auto flex justify-center items-center overflow-visible" data-banner-placement="" data-banner="rectangle_4">
+
+    
+    <div data-yieldlove="rectangle_4"></div>
+
+    
+    <!--[if BLOCK]><![endif]-->    <a href="https://www.bremen.de/kultur/podcast" target="_blank" rel="noopener noreferrer nofollow" class="flex housead absolute inset-0 justify-center items-center" data-house-ad="">
+        
+        <span>
+            <img src="/storage/house-ads/bremenpodcast_336x280.png" alt="Externer Link zu BremenPodcast" width="336" height="280">
+        </span>
+    </a>
+    <!--[if ENDBLOCK]><![endif]-->
+    
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>
+
+
+                </div>
+            </div>
+            <div id="results" class="app-grid mb-4 col-span-4 md:col-span-8 lg:col-start-5">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        <!--[if BLOCK]><![endif]-->        <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/28903" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-1/2 h-1/2 object-contain " src="/storage/icons/mietangebote.svg" alt="Mietangebote">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/28903" class="hover:underline focus:underline">Garage in Findorff / Weidedamm zum 01.09.26</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Guten Tag,<br>angeboten wird hier eine Einzelgarage zur Miete auf einem Garagenhof zum 01.09.2026.&nbsp;<br>Die Garage befindet sich in Findorff in der Heinrich-Böll Str.&nbsp;<br>Monatliche Miete 75€.&nbsp;<br>Innenmaße ca. 2,50x5,00m Tiefe.<br>Bei Interesse kann eine Besichtigung am Dienstag oder Mittwochabend stattfinden.&nbsp;<br>Mechanisches Garagentor.&nbsp;<br>Bei Interesse bitte per Mail melden, gerne mit Angabe einer Telefonnummer.&nbsp;<br>MfG C. Mahnken&nbsp;</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Findorff</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        75 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>26.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:28903,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;CKGaNlLG5654bhayHAPi&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;9601962102e325e57cdf0323772a2041956f74d00bb04303ba0e948a4639bac0&quot;}" wire:effects="[]" wire:id="CKGaNlLG5654bhayHAPi">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/28942" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-1/2 h-1/2 object-contain " src="/storage/icons/mietangebote.svg" alt="Mietangebote">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/28942" class="hover:underline focus:underline">Stellplatz Bremen City</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Biete meinen privaten Stellplatz in der Theatergarage, 1000m vom Marktplatz entfernt an.<br>Miete 100 Euro p. Monat&nbsp;</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Mitte</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        100 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>26.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:28942,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;DL1nFwszQFnUUgVc7URf&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;eda273569688240bfd496f405ee84123b505a2be4a8d19958ffae5793960a7bb&quot;}" wire:effects="[]" wire:id="DL1nFwszQFnUUgVc7URf">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]-->            <!--[if BLOCK]><![endif]-->                <div class="col-span-4 md:col-span-12 min-h-[280px] py-1 flex justify-center items-center mb-4">
+                    <style>
+    [data-banner="rectangle_1"] { min-height: 280px; }
+    @media (min-width: 1024px) { [data-banner="rectangle_1"] { min-height: 280px; } }
+</style>
+
+
+<div class="relative mx-auto flex justify-center items-center overflow-visible" data-banner-placement="" data-banner="rectangle_1">
+
+    
+    <div data-yieldlove="rectangle_1"></div>
+
+    
+    <!--[if BLOCK]><![endif]-->    <a href="https://www.bremen.de" target="_blank" rel="noopener noreferrer nofollow" class="flex housead absolute inset-0 justify-center items-center" data-house-ad="">
+        
+        <span>
+            <img src="/storage/house-ads/bremen.de_336x280.png" alt="Externer Link zu Bremen.de" width="336" height="280">
+        </span>
+    </a>
+    <!--[if ENDBLOCK]><![endif]-->
+    
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>
+
+
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+                    <!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/29143" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-full h-full object-cover " src="/storage/images/thumbnails/9937ed1f-8dd0-478c-b229-ff346841f158.webp" alt="Dachgeschoss">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/29143" class="hover:underline focus:underline">Reihenendhaus Gartenstadt Vahr</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Wir bieten ein in 2023 energetisch saniertes Reihenendhaus mit ca 140 qm Wohn-/Nutzfläche und kleinem Garten an.<br>Alles wurde in 2023 erneuert: Anschluss an Fernwärme, komplett gedämmt, neue Bäder, neue Einbauküche, Böden, Wände,…<br>Bei Interesse bitte mit Angabe des Familiennettoeinkommens, des Berufs, Anzahl der einziehenden Personen und ein paar vorstellenden Worten gerne melden. Bewerbungen ohne diese Angaben werden nicht beantwortet&nbsp;</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Vahr</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        1.400 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>26.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:29143,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;dXvzsCwTCfhZ3w5xOBV0&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;70dfdab1f8222575afe770051db26137ba6e7b00cb9edc8ca6f2fd81f5d1421f&quot;}" wire:effects="[]" wire:id="dXvzsCwTCfhZ3w5xOBV0">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/28828" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-full h-full object-cover " src="/storage/images/thumbnails/0f41d19f-39eb-4761-8d92-a0d8db05b288.webp" alt="Gemeinschaftliches Wohnzimmer">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/28828" class="hover:underline focus:underline">Etage mit 2,5 Zimmern und eigenem Bad in Haus-WG</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div><strong>Du schätzt die Gemeinschaft einer WG, legst aber dennoch viel Wert auf Privatsphäre und Ruhe? </strong><br><strong>Dann könnte das deine neue Wohnung sein! <br></strong>Denn in unserer Haus-WG in Bremen <strong><br></strong>Osterfeuerberg wird zum 15.09.2026 (nach Absprache auch etwas früher oder später) eine komplette Etage mit 2,5 Zimmern, eigenem Badezimmer und Balkon frei. <br>Die Küche, den Wohn-Essbereich, sowie den kleinen Garten teilst du dir mit <em>Lucija (32)</em> und <em>Lukas (31)</em>, ich (Philippa) ziehe aus. <br>Lucija hat aktuell ihr eigenes Forschungsprojekt an der Constructor University, stammt ursprünglich aus Kroatien und lernt noch deutsch. Lukas hat Politikwissenschaften studiert und ist aktuell noch auf Jobsuche. Beide verbringen ihre Freizeit gern draußen, z.B. mit Fahrradfahren, Sport (Gym, Kickboxen oder Segeln) oder mit gemeinschaftlichen Aktivitäten mit Freunden. Zuhause wird gern gekocht und auch mal bei einem Glas Wein geklönt. Durch die Größe des Hauses gibt es aber gleichzeitig viel Privatsphäre und die Möglichkeit, sich auch mal zurückzuziehen. <br>Die Warmmiete beträgt <strong>890€</strong> und setzt sich zusammen aus <strong>690€ Kaltmiete</strong> und <strong>200€ Nebenkosten</strong>, Strom- und Wasser inklusive (Abrechnung natürlich nach tatsächlichem Verbrauch). <br>Da wir erst letztes Jahr eine neue Waschmaschine angeschafft haben, wäre dafür noch eine <strong>Ablöse von 50€</strong> fällig. <br><em>Die zwei Pax-Module, sowie die Kleiderstanden gehören der Vermieterin und verbleiben daher in den Zimmern. <br></em><br><strong>Wenn das für dich interessant klingt, schreib uns doch gern ein paar Zeilen über dich. </strong><br>Wir freuen uns!<br>Lucija, Lukas und Philippa&nbsp;</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Walle</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        890 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>26.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:28828,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;0mGyf6Mlkax7v96awUPA&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;d2ad816259ed66d42cc76b0d33780219df15b9478a9d5adcf9af638bafbb6902&quot;}" wire:effects="[]" wire:id="0mGyf6Mlkax7v96awUPA">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]-->            <!--[if BLOCK]><![endif]-->                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <!--[if ENDBLOCK]><![endif]-->
+                    <!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/29137" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-full h-full object-cover " src="/storage/images/thumbnails/3ee6a6d1-04c7-4566-8688-e555bb5da00c.webp" alt="Flur">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/29137" class="hover:underline focus:underline">Kernsanierung Neu Einliegerwohnung</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Zweitbezug nach Kernsanierung – Moderne, helle Einliegerwohnung mit Terrasse &amp; Garten in Bremen-Ohlenhof/Gröpelingen.<br>Zum 01.09.2026 suchen wir für unsere frisch kernsanierte Einliegerwohnung in einer ruhigen Sackgasse/Einfahrtsstraße den zweiten Mieter. Die Wohnung befindet sich in einer Doppelhaushälfte und bietet sowohl modernen Wohnkomfort als auch eine angenehme, familiäre Nachbarschaft. Das gesamte Haus inklusive der Einliegerwohnung wurde im Jahr 2025 umfassend und professionell kernsaniert – mit Liebe zum Detail und dem Anspruch, höchste Wohnqualität zu schaffen.<br>Sanierungs-Highlights:<br>• Neue Heizungsanlage, Heizkörper und Leitungen<br>• Neue Elektroinstallationen inkl. Sicherungskasten &amp; Abnahme<br>• Neue Schalter, Steckdosen und Beleuchtung<br>• Neu verputzte und fein verspachtelte Wände<br>• Komplett neues Badezimmer mit moderner Ausstattung<br>• Elektrische Rollläden &amp; neue Klingelanlage<br>• Hochwertiger Bodenbelag inkl. neuer Leisten<br>• Neue Fenster, Zimmertüren und Haustüren<br>• Innen- und Außendämmung für optimale Energieeffizienz<br>Kurz gesagt: Alles ist neu – Sie ziehen als Zweiter in ein absolut neuwertiges Zuhause ein.<br>-Lage &amp; Umgebung-<br>Die Wohnung liegt in einer sehr ruhigen Wohnstraße, umgeben von freundlichen, alleinlebenden Rentnern, die während der Bauarbeiten stets verständnisvoll waren. Direkt vor der Haustür befinden sich ein großer Wende- und Stellplatz sowie viele Parkmöglichkeiten. In nur 100 m Entfernung finden Sie Rewe, Penny und eine Tankstelle. Ärzte, Friseure, Banken und weitere Einkaufsmöglichkeiten sind in wenigen Minuten erreichbar. Die Bremer Waterfront erreichen Sie zu Fuß in nur 15 Minuten. Trotz der Nähe zu allen Annehmlichkeiten wohnen Sie hier ruhig wie am Waldrand. Der bremer BSAG Depot Station für Busse und Bahnen ist in 3min fußläufig erreichbar. Keine Haustiere am liebsten.<br>-Ausstattung &amp; Extras-<br>• Große Terrasse &amp; Gartennutzung inklusive (Gartenpflegepflicht)<br>• Helle, lichtdurchflutete Räume<br>• Ruhige Lage mit sehr guter Verkehrsanbindung<br>• Erstbezug nach hochwertiger Kernsanierung<br>-Mietkonditionen-<br>• Kaltmiete: 950 € • Nebenkosten: 150 € (Wasser/Abwasser &amp; Gas) • Warmmiete: 1.100 €<br>• Stromkosten: separat über eigenen Zähler<br>• Kaution: 3 Kaltmieten = 2.850 € (vor Mietbeginn fällig)<br>Besichtigung &amp; Video Zur besseren Vorstellung haben wir einen Video-Rundgang vorbereitet, der bei engerer Auswahl verschickt werden kann. Wir freuen uns auf sympathische Mieter (max.2 Personen), die dieses schöne Zuhause zu schätzen wissen. Bitte geben Sie bei Ihrer Anfrage Ihr monatliches Nettoeinkommen sowie die Art Ihres Arbeitsvertrags (befristet/unbefristet) an. Die Mietdauer ist vorerst auf 2 Jahre befristet, ist aber durchaus verlängerbar. Danke und wir freuen uns.<br>Nach Rücksprache mit der derzeitigen Mieterin ist eine Besichtigung natürlich möglich.<br>Gedämmt und Kernsaniert 2025</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Gröpelingen</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        950 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>26.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:29137,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;lK8ICZix9Dlga5L1Crbh&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;adefabdc9bbb30063742d1a3b86e4751d362289aa04fcc3b7d5e169d5b8ab341&quot;}" wire:effects="[]" wire:id="lK8ICZix9Dlga5L1Crbh">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/22886" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-full h-full object-cover " src="/storage/images/thumbnails/45067070-d240-43ce-861c-d23f804de5c3.webp" alt="Haus">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/22886" class="hover:underline focus:underline">Helle 2-Zimmer-Wohnung in Findorff zu vermieten (befristet!)</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Ab dem 01.08.2026 wird diese helle und praktisch geschnittene Wohnung in der Mitte der Herbststraße (Bremen-Findorff) vermietet.&nbsp;<br>Auf ca. 50m² bietet die im Hochparterre gelegene Wohnung eine ideale Raumaufteilung, die sich perfekt für Singles oder Paare eignet.<br>Die Wohnung überzeugt durch eine bereits installierte und zur Verfügung gestellte ältere einfache Einbauküche und einen kleinen Balkon. Auch die hellen, gut geschnittenen Räume sowie das ebenfalls helle, innenliegende Vollbad sorgen für eine angenehme Wohnatmosphäre. In der Mitte der Wohnung verbindet ein Flur alle Räume und bietet zudem praktischen Stauraum für Garderobe oder Schränke. Durch die großen Fensterflächen wirkt die gesamte Wohnung lichtdurchflutet und einladend.<br>Die Lage in der Herbststraße zählt zu den beliebtesten Wohngegenden Bremens. In nur wenigen Gehminuten erreicht man die Hemmstraße, die Admiralstraße mit vielfältigen Einkaufsmöglichkeiten, Restaurants, Cafés und Anschluss an den ÖPNV in Richtung Uni, Innenstadt und Hauptbahnhof. Auch der Findorffmarkt sowie der Bürgerpark sind fußläufig schnell erreichbar.<br>Die monatliche Kaltmiete beträgt 570€. Hinzu kommen 120,00 € Nebenkosten, sodass sich eine Bruttomiete von insgesamt 690€ ergibt. Die Mietkaution beläuft sich auf drei Kaltmieten (1.710€).<br>Die Wohnung ist aufgrund geplanten Eigenbedarfs zunächst befristet für 5 Jahre zu vermieten.<br>Bitte senden Sie bei Interesse eine umfassende Vorstellung Ihrer Person (aktueller Beruf, monatliches Nettoeinkommen etc.). Vielen Dank!</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Findorff</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        570 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>25.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:22886,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;k6YcbNV3NE190YzMWfTc&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;5bc795c4d62ae508d924ae74f4eb446b5e60dcf3c2de34b8b1ceb19769b90aaf&quot;}" wire:effects="[]" wire:id="k6YcbNV3NE190YzMWfTc">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]-->            <!--[if BLOCK]><![endif]-->                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <!--[if ENDBLOCK]><![endif]-->
+                    <!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/28435" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-1/2 h-1/2 object-contain " src="/storage/icons/mietangebote.svg" alt="Mietangebote">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/28435" class="hover:underline focus:underline">Wir suchen eine schöne neue Wohnung</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Durch eine veränderte Lebenssituation suchen wir eine neue Wohnung. Wir suchen eine Dreizimmerwohnung gerne mit Dachterrasse/großem Balkon oder Garten.<br>Die neue Wohnung sollte zentrumsnah liegen. Aktuell wohnen wir in einem Altbremer Haus beim Werdersee, welches auch als Tausch angeboten werden könnte.</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Mitte</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        900 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>25.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:28435,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;2BtnFVIwZadTIEbNzzYn&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;7e2f2f89e50bbc28c559953051da1dd0009a1a3bfbdbd8f891f13af1a794f11b&quot;}" wire:effects="[]" wire:id="2BtnFVIwZadTIEbNzzYn">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/28558" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-full h-full object-cover " src="/storage/images/thumbnails/f8745d60-fbd6-435a-97c1-e0b6dff2473e.webp" alt="Zimmer ">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/28558" class="hover:underline focus:underline">Biete Zimmer für Zwischenmiete</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Ich bin für September und Oktober im Ausland und möchte mein wunderschönes WG Zimmer für die Zeit vermieten. Die Wohnung ist 82 qm groß, das Zimmer 25qm. Teilen würdest du dir die Wohnung mit meiner lieben Mitbewohnerin (32)&nbsp;<br>Das Zimmet würde vollmöbiliert vermietet werden und generell ist in der Wohnung alles was du für 2 Monate brauchst.&nbsp;</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Schwachhausen</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        597 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>25.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:28558,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;0uOxz1shWX21LyrM7mVn&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;a24d841ceaf214d8c95fb57b2411cfd0964c67a57b0c7b82a3c5028b92b77ed5&quot;}" wire:effects="[]" wire:id="0uOxz1shWX21LyrM7mVn">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]-->            <!--[if BLOCK]><![endif]-->                <div class="col-span-4 md:col-span-12 min-h-[280px] py-1 flex justify-center items-center mb-4">
+                    <style>
+    [data-banner="rectangle_2"] { min-height: 280px; }
+    @media (min-width: 1024px) { [data-banner="rectangle_2"] { min-height: 280px; } }
+</style>
+
+
+<div class="relative mx-auto flex justify-center items-center overflow-visible" data-banner-placement="" data-banner="rectangle_2">
+
+    
+    <div data-yieldlove="rectangle_2"></div>
+
+    
+    <!--[if BLOCK]><![endif]-->    <a href="https://www.bremen.de/kultur/veranstaltungen#/" target="_blank" rel="noopener noreferrer nofollow" class="flex housead absolute inset-0 justify-center items-center" data-house-ad="">
+        
+        <span>
+            <img src="/storage/house-ads/veranstaltungskalender_336x280.png" alt="Externer Link zu Veranstaltungskalender" width="336" height="280">
+        </span>
+    </a>
+    <!--[if ENDBLOCK]><![endif]-->
+    
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>
+
+
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+                    <!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/28684" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-1/2 h-1/2 object-contain " src="/storage/icons/mietangebote.svg" alt="Mietangebote">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/28684" class="hover:underline focus:underline">Tiefgaragen-Stellplatz in Bremen-Arsten</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>&nbsp;Tiefgaragen-Stellplatz in Bremen-Arsten in der Nähe zu Bremen-Kattenesch und Bremen Obervieland zu vermieten: „In den Niederkämpen 40-44" in 28279 Bremen.<br>Der Stellplatz befindet sich in einer gesicherten, durch ein Rolltor abgeschlossenen und gut belüfteten Tiefgarage (keine Stapelgarage) mit ca. 30 Stellplätzen. Der Zutritt ist nur für Mieter möglich. Geeignet auch für tiefer gelegte Fahrzeuge. Einfahrtshöhe ca. 2,04m.<br>Größe der Stellfläche ca. 2,62m x 5,13m. Auch mehrere Motorräder möglich.<br>Kein Strom vorhanden und auch nicht als Lagerplatz geeignet!<br>Verfügbar ab 01. August 2026.<br>Monatsmiete: 95,-€&nbsp;</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Neustadt</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        95 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>25.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:28684,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;5w2SBg6rS2L76kAzelB0&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;d1cc8c04553c9e604b3e0830ec3de0b15631463d3161dfe58bf5b2e730c4b5ce&quot;}" wire:effects="[]" wire:id="5w2SBg6rS2L76kAzelB0">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->            <div class="col-span-2 md:col-span-12 h-full">
+            <div class="app-grid h-full mb-4 p-3 md:p-4 bg-white dark:bg-transparent dark:border-2 dark:border-white rounded-2xl gap-1 md:gap-4">
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <div class="col-span-4 bg-white rounded-xl lg:col-span-5 aspect-16/9 md:aspect-square lg:aspect-6/7 xl:aspect-square">
+        <a href="/show/28783" tabindex="-1" class="w-full h-full flex justify-center items-center">
+            <img class="rounded-xl  w-full h-full object-cover " src="/storage/images/thumbnails/e910e254-6773-480f-9cac-e8d9c14c459e.webp" alt="Beispiel ">
+        </a>
+    </div>
+    <!--[if ENDBLOCK]><![endif]-->    <div class="col-span-4 md:col-span-4 lg:col-span-7  flex flex-col justify-between gap-2 md:gap-6 self-stretch">
+        <div class="flex flex-col justify-start items-start gap-6">
+            <h3 class="font-semibold md:text-lg text-m w-full hyphens-auto">
+                <a href="/show/28783" class="hover:underline focus:underline">Stellplatz</a>
+            </h3>
+            <div class="justify-start clamp-5-lines trix-content"><div>Biete Wohnwagen oder Wohnmobil<br>Außen- Stellplätze an ( auch möglich PKW Anhänger und Trailer oder andere Fahrzeuge auf Anfrage)<br>Stellplätze ab 50€ im Monat je nach benötiger Größe.<br>Aktuell noch Plätze verfügbar<br>Gelände ist nicht einsichtig, eingezäunt und verschlossen sowie Kamera überwacht. Zugang ist jederzeit möglich!<br>Direkt an der Auffahrt A28/ B75<br>Von Privat</div></div>
+        </div>
+        <div class="w-full overflow-hidden inline-flex flex-wrap gap-1 md:gap-4 justify-end items-end">
+            <div class="w-full flex-1 inline-flex flex-col justify-end items-start gap-1.5 md:gap-2.5">
+                <!--[if BLOCK]><![endif]-->                <div class="w-full inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-location-pin"></span>
+                    <span>Außerhalb Bremens</span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <!--[if BLOCK]><![endif]-->                <div class="inline-flex justify-start items-center gap-1 md:gap-2">
+                    <span class="far fa-circle-euro"></span>
+                    <span>
+                        <!--[if BLOCK]><![endif]-->                        50 € <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                        <!--[if ENDBLOCK]><![endif]-->                    </span>
+                </div>
+                <!--[if ENDBLOCK]><![endif]-->
+                <div class="hidden md:inline-flex justify-start items-center gap-2">
+                    <span class="far fa-calendar"></span>
+                    <span>25.07.2026<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></span>
+                </div>
+            </div>
+            <div class="flex flex-row-reverse">
+                <!--[if BLOCK]><![endif]-->                <div wire:snapshot="{&quot;data&quot;:{&quot;advertisementId&quot;:28783,&quot;is_favorite&quot;:false,&quot;small&quot;:true},&quot;memo&quot;:{&quot;id&quot;:&quot;hZF0bmVE9nPHUNTuDKQo&quot;,&quot;name&quot;:&quot;favorite-button&quot;,&quot;path&quot;:&quot;verkauf-und-angebote\/mietobjekte&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;release&quot;:&quot;a-a-a&quot;,&quot;children&quot;:[],&quot;scripts&quot;:[],&quot;assets&quot;:[],&quot;errors&quot;:[],&quot;locale&quot;:&quot;de&quot;},&quot;checksum&quot;:&quot;53592c59937f2e7962555882eb293c994916d94e02b5b12c608c4c3244d39bbe&quot;}" wire:effects="[]" wire:id="hZF0bmVE9nPHUNTuDKQo">
+<button wire:click="toggleFavorite" class="md:hidden shadow-[inset_1px_1px_4px_0px_rgba(255,255,255,0.60)] hover:shadow-none h-10 w-10 rounded-xl bg-accent text-white" aria-controls="short-links">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+<button wire:click="toggleFavorite" class="button-basics hidden md:block small">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-heart"></span>
+        <span class="button-underline">Merken</span>
+    <!--[if ENDBLOCK]><![endif]--></button>
+</div>                <!--[if ENDBLOCK]><![endif]-->            </div>
+        </div>
+    </div>
+<!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>        </div>
+        <!--[if BLOCK]><![endif]-->            <!--[if BLOCK]><![endif]-->                <div class="col-span-4 md:col-span-12 min-h-[280px] py-1 flex justify-center items-center mb-4">
+                    <style>
+    [data-banner="rectangle_3"] { min-height: 280px; }
+    @media (min-width: 1024px) { [data-banner="rectangle_3"] { min-height: 280px; } }
+</style>
+
+
+<div class="relative mx-auto flex justify-center items-center overflow-visible" data-banner-placement="" data-banner="rectangle_3">
+
+    
+    <div data-yieldlove="rectangle_3"></div>
+
+    
+    <!--[if BLOCK]><![endif]-->    <a href="https://www.bremen.de/kultur/veranstaltungen#/" target="_blank" rel="noopener noreferrer nofollow" class="flex housead absolute inset-0 justify-center items-center" data-house-ad="">
+        
+        <span>
+            <img src="/storage/house-ads/veranstaltungskalender_336x280.png" alt="Externer Link zu Veranstaltungskalender" width="336" height="280">
+        </span>
+    </a>
+    <!--[if ENDBLOCK]><![endif]-->
+    
+    <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]--></div>
+
+
+                </div>
+            <!--[if ENDBLOCK]><![endif]-->
+                    <!--[if ENDBLOCK]><![endif]-->    <!--[if ENDBLOCK]><![endif]-->    <!--[if BLOCK]><![endif]-->    <nav role="navigation" aria-label="Pagination Navigation" class="col-span-4 md:col-span-12 flex flex-col-reverse gap-4 items-center md:flex-row md:justify-between">
+        <div class="md:min-w-42">
+            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->        </div>
+        <div class="hidden bg-accent py-2 rounded-lg text-white lg:flex divide-x-2 divide-white">
+            
+            <!--[if BLOCK]><![endif]-->                <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                <!--[if BLOCK]><![endif]-->                    <span aria-current="page" class="text-center font-semibold px-2 min-w-8">1</span>
+                <!--[if ENDBLOCK]><![endif]-->                            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                <!--[if BLOCK]><![endif]-->                    <a href="https://schwarzesbrett.bremen.de/verkauf-und-angebote/mietobjekte?sort=date_desc&amp;page=2#results" aria-label="Go to page 2" class="text-center hover:underline hover:text-white px-2 min-w-8">
+                        2
+                    </a>
+                <!--[if ENDBLOCK]><![endif]-->                            <!--[if BLOCK]><![endif]--><!--[if ENDBLOCK]><![endif]-->                <!--[if BLOCK]><![endif]-->                    <a href="https://schwarzesbrett.bremen.de/verkauf-und-angebote/mietobjekte?sort=date_desc&amp;page=3#results" aria-label="Go to page 3" class="text-center hover:underline hover:text-white px-2 min-w-8">
+                        3
+                    </a>
+                <!--[if ENDBLOCK]><![endif]-->                            <!--[if BLOCK]><![endif]-->                    <span aria-disabled="true" class="text-center px-2 min-w-8">…</span>
+                <!--[if ENDBLOCK]><![endif]-->                <!--[if BLOCK]><![endif]-->                    <a href="https://schwarzesbrett.bremen.de/verkauf-und-angebote/mietobjekte?sort=date_desc&amp;page=14#results" aria-label="Go to page 14" class="text-center hover:underline hover:text-white px-2 min-w-8">
+                        14
+                    </a>
+                <!--[if ENDBLOCK]><![endif]-->            <!--[if ENDBLOCK]><![endif]-->        </div>
+        <div class="md:min-w-42">
+            
+            <!--[if BLOCK]><![endif]-->                <a href="https://schwarzesbrett.bremen.de/verkauf-und-angebote/mietobjekte?sort=date_desc&amp;page=2#results" class="button-basics">
+    <!--[if BLOCK]><![endif]-->        <span class="fas fa-forward"></span>
+    <!--[if ENDBLOCK]><![endif]-->    <span class="button-underline">
+        Nächste Seite
+    </span>
+</a>
+            <!--[if ENDBLOCK]><![endif]-->        </div>
+    </nav>
+<!--[if ENDBLOCK]><![endif]-->    
+</div>            <div class="col-span-4 md:col-span-8 lg:col-span-12 flex justify-center mt-8" x-data="{ copied: false, url: 'https://schwarzesbrett.bremen.de/feed/verkauf-und-angebote/mietobjekte' }">
+                <button class="cursor-pointer underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200" @click="navigator.clipboard.writeText(url); copied = true; setTimeout(() =&gt; copied = false, 2000)">
+                    <span class="fa" :class="copied ? 'fa-check' : 'fa-rss'"></span>
+                    <span class="button-underline" x-text="copied ? 'URL wurde kopiert' : 'URL zum RSS-Feed kopieren'"></span>
+                </button>
+            </div>
+         </section>
+ </main>
+
+      <footer class="bg-white dark:bg-white/10 footer-dark py-10 mt-30">
+    <div class="container app-grid">
+        <div class="col-span-4 md:col-span-6 lg:col-span-8 block lg:flex items-start gap-4">
+            <div>
+                <a href="/" class="group mb-2 inline-block">
+                    <img src="https://schwarzesbrett.bremen.de/images/logo.svg" alt="Logo Schwarzes Brett Bremen" class="dark:hidden w-54 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-blue-600">
+                    <img src="https://schwarzesbrett.bremen.de/images/logo_dark.svg" alt="Logo Schwarzes Brett Bremen" class="hidden dark:block w-54 group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-blue-600">
+                </a>
+                <p class="mb-4">Telefon: 0421 - 9600 - 880<br>
+                E-Mail: <a href="/cdn-cgi/l/email-protection#86f5e5eef1e7f4fce3f5e4f4e3f2f2c6f1e0e4abe4f4e3ebe3e8a8e2e3" class="underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200"><span class="__cf_email__" data-cfemail="fa8999928d9b88809f8998889f8e8eba8d9c98d798889f979f94d49e9f">[email&nbsp;protected]</span></a></p>
+                <p>© 2026 Bremen Online<br>
+                eine Abteilung der WFB Wirtschaftsförderung Bremen GmbH</p>
+            </div>
+        </div>
+        <div class="col-span-4 md:col-span-2 lg:col-span-4">
+            <ul class="block xl:grid grid-cols-2 grid-rows-3 gap-4 grid-flow-col list-none pl-0">
+                <li class="mb-2 xl:mb-0"><a class="underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200" href="/impressum">Impressum</a></li>
+                <li class="mb-2 xl:mb-0"><a class="underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200" href="/datenschutz">Datenschutz</a></li>
+                <li class="mb-2 xl:mb-0"><a class="underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200" href="/support">Support &amp; Kontakt</a></li>
+                <li class="mb-2 xl:mb-0"><a class="underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200" href="/barrierefreiheit">Barrierefreiheit</a></li>
+                <li class="mb-2 xl:mb-0"><a class="underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200" href="https://www.bremen.de/produkte-und-mediadaten" target="_blank" rel="noopener noreferrer" title="Öffnet in neuem Fenster">Produkte &amp; Medien</a></li>
+                <li><a class="underline hover:text-white hover:bg-accent focus-visible:text-white focus-visible:bg-accent duration-200" href="/nutzungsbedingungen">Nutzungsbedingungen</a></li>
+            </ul>
+        </div>
+    </div>
+</footer>
+      
+            <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js" type="text/plain"></script><script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="/js/components/main.js" type="text/plain"></script><iframe class="CybotCookiebotHiddenIframe" name="__uspapiLocator" tabindex="-1" role="presentation" aria-hidden="true" title="Blank"></iframe>
+          <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="/js/header-nav.js" type="text/plain"></script>
+    <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="https://schwarzesbrett.bremen.de/js/yieldlove-placements/billboard.js" type="text/plain"></script>
+    <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="https://schwarzesbrett.bremen.de/js/yieldlove-placements/rectangle_4.js" type="text/plain"></script>
+    <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="https://schwarzesbrett.bremen.de/js/yieldlove-placements/leaderboard_wide_1.js" type="text/plain"></script>
+    <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="https://schwarzesbrett.bremen.de/js/yieldlove-placements/rectangle_1.js" type="text/plain"></script>
+    <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="https://schwarzesbrett.bremen.de/js/yieldlove-placements/rectangle_2.js" type="text/plain"></script>
+    <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="https://schwarzesbrett.bremen.de/js/yieldlove-placements/rectangle_3.js" type="text/plain"></script>
+    <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="/js/skip-nav.js" type="text/plain"></script>
+ <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="/js/components/advertisement-index.js" type="text/plain"></script>
+           <script nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" src="/js/components/notification.js" type="text/plain"></script>
+<script src="/livewire/livewire.min.js?id=42cd7fd5" nonce="iwiZbyt5BvclGupzKFEbAdxbQ4IN4uzcZxJJel8E" data-csrf="Bz19davhxKjcIkJEk2AycDuLY2yoQFoe8i18Qxc1" data-update-uri="/livewire/update" data-navigate-once="true" type="text/plain"></script>
+<script type="text/plain">(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a21555bd98cf993b',t:'MTc4NTA4OTE1MQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script><script type="text/plain" src="https://static.cloudflareinsights.com/beacon.min.js/v4513226cdae34746b4dedf0b4dfa099e1781791509496" integrity="sha512-ZE9pZaUXND66v380QUtch/5sE9tPFh2zg45pR2PB0CVkCtOREv2AJKkSidISWkysEuQ0EH8faUU5du78bx87UQ==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;8fe9e7d992bc41e381c68199a3a28a9a&quot;}" crossorigin="anonymous"></script>
+
+
+<iframe class="CybotCookiebotHiddenIframe" name="__tcfapiLocator"></iframe><iframe class="CybotCookiebotOffscreenIframe" tabindex="-1" role="presentation" aria-hidden="true" title="Blank" src="https://consentcdn.cookiebot.com/sdk/bc-v4.min.html"></iframe>
