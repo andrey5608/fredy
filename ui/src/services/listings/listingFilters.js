@@ -34,6 +34,10 @@ export const NEUTRAL = {
   status: null,
   afford: null,
   commute: null,
+  down: null,
+  fiber: null,
+  mtech: null,
+  mop: null,
   hidden: false,
 };
 
@@ -47,7 +51,29 @@ export const NEUTRAL = {
  *
  * @type {string[]}
  */
-export const FILTER_KEYS = ['hidden', 'active', 'watch', 'status', 'afford', 'commute', 'provider', 'job'];
+export const FILTER_KEYS = [
+  'hidden',
+  'active',
+  'watch',
+  'status',
+  'afford',
+  'commute',
+  'down',
+  'fiber',
+  'mtech',
+  'provider',
+  'job',
+];
+
+/**
+ * The mobile operator is not in `FILTER_KEYS` on purpose.
+ *
+ * It cannot filter anything on its own - the query needs a technology to turn the pair into a bit -
+ * so counting it would report two filters where the user set one, and clearing the technology has
+ * to take it along.
+ * @type {string}
+ */
+export const MOBILE_OPERATOR_KEY = 'mop';
 
 /**
  * Whether a filter is doing something.
@@ -114,6 +140,12 @@ export function clearFilter(key) {
   if (key === 'active' || key === 'hidden') {
     return showPatch('all');
   }
+  // The operator rides along with the technology. Leaving it behind would put a value in the URL
+  // that nothing reads and no chip can show, which then quietly reappears the next time somebody
+  // picks a technology.
+  if (key === 'mtech') {
+    return { mtech: NEUTRAL.mtech, [MOBILE_OPERATOR_KEY]: NEUTRAL[MOBILE_OPERATOR_KEY], page: 1 };
+  }
   return { [key]: NEUTRAL[key], page: 1 };
 }
 
@@ -166,6 +198,18 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
             minutes: parsed.maxMinutes,
           });
     },
+    down: () => t('listings.filterDownstreamOption', { mbit: values.down }),
+    fiber: () => t('listings.filterFiberOnly'),
+    mtech: () => {
+      const technology = t(`connectivity.tech.${values.mtech}`);
+      const operator = values[MOBILE_OPERATOR_KEY];
+      return operator == null
+        ? technology
+        : t('listings.filterMobileWithOperator', {
+            technology,
+            operator: t(`connectivity.operator.${operator}`),
+          });
+    },
     provider: () => named(providers, values.provider),
     job: () => named(jobs, values.job),
   };
@@ -174,4 +218,70 @@ export function describeActiveFilters(values, { t, jobs = [], providers = [] }) 
     key,
     label: labels[key](),
   }));
+}
+/**
+ * Restricts the available providers to those for which results exist (or are configured
+ * in the user's jobs), so the filter dropdown only contains relevant providers.
+ *
+ * If `availableProviders` (from listing search results) is provided and non-empty,
+ * it narrows to providers present in those results. Otherwise, it falls back to
+ * providers configured across the user's jobs (or the selected job).
+ *
+ * When no jobs are configured yet or no providers can be derived, all providers are
+ * preserved as a fallback. A currently active provider filter is always preserved.
+ *
+ * @param {{id: string, name: string}[]} [providers]
+ * @param {Array<{id: string, name?: string, provider?: Array<{id?: string, name?: string}>}>} [jobs]
+ * @param {string|null} [selectedJobId]
+ * @param {string|null} [currentProviderId]
+ * @param {string[]|null} [availableProviders] Distinct provider IDs that have results
+ * @returns {{id: string, name: string}[]}
+ */
+export function filterConfiguredProviders(
+  providers = [],
+  jobs = [],
+  selectedJobId = null,
+  currentProviderId = null,
+  availableProviders = null,
+) {
+  if (!Array.isArray(providers) || providers.length === 0) {
+    return [];
+  }
+
+  // 1. If concrete result providers from listings exist, prioritize them
+  if (Array.isArray(availableProviders) && availableProviders.length > 0) {
+    const resultProviderIds = new Set(availableProviders);
+    return providers.filter(
+      (provider) => resultProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+    );
+  }
+
+  // 2. Otherwise fall back to job configurations
+  if (!Array.isArray(jobs) || jobs.length === 0) {
+    return providers;
+  }
+
+  const relevantJobs = selectedJobId ? jobs.filter((j) => j?.id === selectedJobId || j?.name === selectedJobId) : jobs;
+
+  const targetJobs = relevantJobs.length > 0 ? relevantJobs : jobs;
+
+  const configuredProviderIds = new Set();
+  for (const job of targetJobs) {
+    if (Array.isArray(job?.provider)) {
+      for (const p of job.provider) {
+        const id = p?.id || p?.name;
+        if (id) {
+          configuredProviderIds.add(id);
+        }
+      }
+    }
+  }
+
+  if (configuredProviderIds.size === 0) {
+    return providers;
+  }
+
+  return providers.filter(
+    (provider) => configuredProviderIds.has(provider.id) || (currentProviderId && provider.id === currentProviderId),
+  );
 }

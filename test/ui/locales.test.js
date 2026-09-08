@@ -9,6 +9,14 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { TRACKING_POIS } from '../../lib/TRACKING_POIS.js';
 import { COMMUTE_ACTIONS } from '../../ui/src/services/jobs/commuteFilter.js';
+import {
+  CONNECTIVITY_SOURCES,
+  DISPLAY_TECHNOLOGIES,
+  DISPLAY_MOBILE_TECHNOLOGIES,
+  FILTERABLE_TECHNOLOGIES,
+  FILTERABLE_OPERATORS,
+} from '../../ui/src/components/connectivity/connectivityFormat.js';
+import { PLACE_CATEGORIES } from '../../ui/src/services/travelTime/placeCategories.js';
 
 const localeDir = path.join(path.dirname(fileURLToPath(import.meta.url)), '../../ui/src/locales');
 const donateComponent = fs.readFileSync(path.join(localeDir, '../components/donate/Donate.jsx'), 'utf-8');
@@ -88,6 +96,24 @@ const COMPUTED_KEYS = [
   // inside the dropdown that decides whether a listing is filtered out.
   ...COMMUTE_ACTIONS.map((action) => `jobs.mutation.commuteAction.${action}`),
   ...COMMUTE_ACTIONS.map((action) => `jobs.mutation.commuteActionHelp.${action}`),
+  // Same idea for the connectivity card and its filters: every one of these is built from a list,
+  // and a missing entry paints the raw key into a chip on the listing detail page.
+  ...new Set(
+    [...DISPLAY_MOBILE_TECHNOLOGIES, ...FILTERABLE_TECHNOLOGIES].map((technology) => `connectivity.tech.${technology}`),
+  ),
+  ...DISPLAY_TECHNOLOGIES.map((technology) => `connectivity.fixed.${technology}`),
+  ...FILTERABLE_OPERATORS.map((code) => `connectivity.operator.${code}`),
+  ...CONNECTIVITY_SOURCES.map((id) => `settings.connectivitySource.${id}`),
+  ...CONNECTIVITY_SOURCES.map((id) => `settings.connectivitySourceHelp.${id}`),
+  // The price per square metre verdicts, built from what the deviation works out to, and the two
+  // dashboard descriptions, built from the deal type the median was taken over. A missing one
+  // paints the raw key into the badge on every listing card.
+  ...['below', 'inline', 'above'].map((verdict) => `listings.pricePerSqmVerdict.${verdict}`),
+  ...['rent', 'buy'].map((dealType) => `dashboard.kpiMedianSqmDesc.${dealType}`),
+  // The place types a travel time can be measured to. Built from the list rather than written out,
+  // so adding a category is what adds the assertion - an unnamed one would otherwise reach the
+  // dropdown in the travel time settings as the raw key next to its icon.
+  ...PLACE_CATEGORIES.map((category) => `travelTime.placeCategory.${category.id}`),
 ];
 
 /**

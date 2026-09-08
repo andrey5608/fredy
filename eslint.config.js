@@ -13,11 +13,6 @@ export default [
   {
     ignores: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/public/**', 'db/**', 'conf/**'],
   },
-  {
-    files: ['**/*.{js,jsx,ts,tsx}'],
-  },
-  js.configs.recommended,
-  prettier,
 
   {
     files: ['**/*.{js,jsx}'],

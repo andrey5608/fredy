@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { useSelector, useActions } from '../../services/state/store.js';
 import {
   Typography,
@@ -37,25 +37,33 @@ import {
   IconDelete,
   IconExpand,
   IconGridView,
+  IconCalendar,
+  IconBolt,
+  IconRefresh,
 } from '@douyinfe/semi-icons';
 import maplibregl from '../../components/map/maplibre.js';
-import MapCanvas from '../../components/map/Map.jsx';
+import MapCanvas, { HOME_MARKER_COLOR } from '../../components/map/Map.jsx';
+import { useProviderCountries } from '../../hooks/useProviderCountries.js';
 import no_image from '../../assets/no_image.png';
 import * as timeService from '../../services/time/timeService.js';
 import { formatEuroPrice } from '../../services/price/priceService.js';
 import { getBoundsFromCoords } from './mapUtils.js';
-import { applyRouteLayers, buildRouteData } from './detailMapLayers.js';
+import { applyRouteLayers, buildRouteData, placeTargets } from './detailMapLayers.js';
 import { TRAVEL_MODES } from '../../components/transit/travelTimeFormat.js';
 import { getAddresses } from '../../utils.js';
+import { lagecheckUrl } from '../../services/listings/lagecheckUrl.js';
 import { xhrPost, xhrGet, xhrDelete, errorMessage } from '../../services/xhr.js';
 import ListingDeletionModal from '../../components/ListingDeletionModal.jsx';
 
 import Headline from '../../components/headline/Headline.jsx';
 import IconEuro from '../../components/icons/IconEuro.jsx';
 import StatusControl from '../../components/listings/StatusControl.jsx';
+import PricePerSqmBadge, { describeBenchmark } from '../../components/listings/PricePerSqmBadge.jsx';
+import { readMarketBenchmark } from '../../services/listings/marketBenchmark.js';
 import ListingFinanceCard from './components/ListingFinanceCard.jsx';
 import PriceHistoryChart from './components/PriceHistoryChart.jsx';
 import NearbyStops from '../../components/transit/NearbyStops.jsx';
+import ConnectivityCard from '../../components/connectivity/ConnectivityCard.jsx';
 import TravelTimes from '../../components/transit/TravelTimes.jsx';
 import AddressEditor from './components/AddressEditor.jsx';
 import './ListingDetail.less';
@@ -90,9 +98,14 @@ export default function ListingDetail() {
   const { isComplete: buyComplete, rentComplete, thresholds: financeThresholds } = useFinanceProfile();
   const listing = useSelector((state) => state.listingsData.currentListing);
   const userSettings = useSelector((state) => state.userSettings.settings);
-  const homeAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
+  const connectivityEnabled = useSelector((state) => state.generalSettings.settings?.connectivityEnabled === true);
+  const pois = useSelector((state) => state.tracking.pois);
+  const savedAddresses = useMemo(() => getAddresses(userSettings), [userSettings]);
   const listingDeletionPref = userSettings?.listing_deletion_preference;
   const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
+  // The listing does name a provider, but the pin can be dragged anywhere the user's own searches
+  // reach, so the map takes the same account-wide union the listings map does.
+  const countries = useProviderCountries();
   const map = useRef(null);
   const [mapReady, setMapReady] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -115,6 +128,10 @@ export default function ListingDetail() {
   // Which route the map draws. Straight line to begin with, because that is the one that needs
   // nothing fetched and so is never missing.
   const [routeMode, setRouteMode] = useState('straight');
+  // Everything the map draws a pin and a line for. A saved address is a fixed point and the same one
+  // for every listing; a place type has no point of its own, so the supermarket it actually resolved
+  // to comes from this listing's own travel times, which is where the sweep recorded it.
+  const homeAddresses = useMemo(() => [...savedAddresses, ...placeTargets(routeTimes)], [savedAddresses, routeTimes]);
 
   useEffect(() => {
     setRouteTimes(listing?.travelTimes ?? []);
@@ -181,6 +198,9 @@ export default function ListingDetail() {
    */
   const geoUnresolved = !hasGeo && listing?.latitude === -1;
 
+  // Null for a listing Fredy could not place, which is what hides the block on the page.
+  const lagecheckHref = lagecheckUrl(listing ?? {});
+
   // Where the map opens. Without coordinates - the case pin dropping exists for - the user's own
   // reference address is the best guess at the right part of the country; failing that, the map's
   // own default view of Germany.
@@ -231,7 +251,7 @@ export default function ListingDetail() {
 
     homeAddresses.forEach((home) => {
       markers.push(
-        new maplibregl.Marker({ color: 'red' })
+        new maplibregl.Marker({ color: HOME_MARKER_COLOR })
           .setLngLat([home.coords.lng, home.coords.lat])
           .setPopup(
             new maplibregl.Popup({ offset: 25 }).setHTML(
@@ -293,6 +313,17 @@ export default function ListingDetail() {
     } catch (e) {
       console.error('Failed to operate Watchlist:', e);
       Toast.error(t('listing.detail.toastWatchlistError'));
+    }
+  };
+
+  const handleReactivate = async () => {
+    try {
+      await actions.listingsData.reactivateListings([listing.id]);
+      await actions.listingsData.getListing(listingId);
+      Toast.success(t('listings.toastReactivated'));
+    } catch (e) {
+      console.error('Failed to reactivate listing:', e);
+      Toast.error(t('listings.toastReactivateError'));
     }
   };
 
@@ -417,11 +448,15 @@ export default function ListingDetail() {
   };
   const statusLabel = listing.status?.status ? t(statusKeyMap[listing.status.status] ?? listing.status.status) : null;
 
+  // Read once: the row below and the help text behind it are two readings of the same four columns,
+  // and computing them separately is how they end up disagreeing.
+  const marketBenchmark = readMarketBenchmark(listing);
+
   const data = [
     {
       key: t('listing.detail.fieldPrice'),
       value: listing.price ? (
-        <span className="listing-detail__price">{formatEuroPrice(listing.price)}</span>
+        <span className="listing-detail__price">{formatEuroPrice(listing.price, locale)}</span>
       ) : (
         t('common.na')
       ),
@@ -433,6 +468,18 @@ export default function ListingDetail() {
       value: listing.size ? `${listing.size} m²` : t('common.na'),
       Icon: <IconExpand />,
       helpText: t('listing.detail.fieldSizeHelp'),
+    },
+    {
+      key: t('listing.detail.fieldPricePerSqm'),
+      value: marketBenchmark ? <PricePerSqmBadge listing={listing} withTooltip={false} /> : t('common.na'),
+      Icon: <IconEuro />,
+      // Two different explanations. With a benchmark the interesting part is the comparison and
+      // where it came from; without one it is why no comparison is shown, which is a question the
+      // page would otherwise leave the reader to guess at.
+      helpText:
+        marketBenchmark && marketBenchmark.verdict != null
+          ? describeBenchmark(marketBenchmark, t, locale)
+          : t('listing.detail.fieldPricePerSqmHelp'),
     },
     {
       key: t('listing.detail.fieldRooms'),
@@ -459,6 +506,26 @@ export default function ListingDetail() {
       helpText: t('listing.detail.fieldAddedHelp'),
     },
   ];
+
+  // Only the detail page states these, and only for a part of the listings, so they are pushed
+  // rather than shown as another "N/A" next to the figures every listing carries.
+  if (listing.build_year) {
+    data.push({
+      key: t('listing.detail.fieldBuildYear'),
+      value: listing.build_year,
+      Icon: <IconCalendar />,
+      helpText: t('listing.detail.fieldBuildYearHelp'),
+    });
+  }
+
+  if (listing.energy_class) {
+    data.push({
+      key: t('listing.detail.fieldEnergyClass'),
+      value: listing.energy_class,
+      Icon: <IconBolt />,
+      helpText: t('listing.detail.fieldEnergyClassHelp'),
+    });
+  }
 
   // The verdict belongs next to the price, not only in the costing block further down. It comes
   // with the listing from the server, decided against the same profile and thresholds the
@@ -510,7 +577,12 @@ export default function ListingDetail() {
       <Headline
         text={listing?.title || t('listing.detail.defaultTitle')}
         actions={
-          <Button icon={<IconArrowLeft />} onClick={() => navigate(-1)} theme="borderless" style={{ color: '#909090' }}>
+          <Button
+            icon={<IconArrowLeft />}
+            onClick={() => navigate(-1)}
+            theme="borderless"
+            style={{ color: 'var(--f-muted)' }}
+          >
             {t('listing.detail.back')}
           </Button>
         }
@@ -548,6 +620,13 @@ export default function ListingDetail() {
               <IconLink style={{ marginRight: 6 }} />
               {t('listing.detail.openListing')}
             </a>
+            {/* Sits next to "open listing" on purpose: the user clicks that first, sees the ad is
+                very much alive, and the correction is the next button along. */}
+            {listing.is_active === 0 && (
+              <Button icon={<IconRefresh />} onClick={handleReactivate} theme="light" type="secondary">
+                {t('listing.detail.reactivate')}
+              </Button>
+            )}
             <Button
               icon={<IconDelete />}
               onClick={() => {
@@ -636,6 +715,7 @@ export default function ListingDetail() {
                   {/* Public transport on by default: the first question about any flat is how to
                       get out of it, and the answer should already be on screen. */}
                   <MapCanvas
+                    countries={countries}
                     initialCenter={mapCenter}
                     initialZoom={hasGeo ? 14 : 10}
                     defaultShowTransit
@@ -715,6 +795,38 @@ export default function ListingDetail() {
                     {t('listing.detail.priceHistory')}
                   </Title>
                   <PriceHistoryChart data={priceHistory} locale={locale} />
+                </>
+              )}
+
+              {lagecheckHref && (
+                <>
+                  <Divider margin="1.5rem" />
+                  <Text strong style={{ display: 'block', marginBottom: '0.5rem' }}>
+                    {t('lagecheck.title')}
+                  </Text>
+                  <Text size="small" type="tertiary" style={{ display: 'block', marginBottom: '0.5rem' }}>
+                    {t('lagecheck.description')}
+                  </Text>
+                  <a
+                    className="listing-detail__lagecheck-link"
+                    href={lagecheckHref}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    onClick={() => actions.tracking.trackPoi(pois.LAGECHECK_OPENED)}
+                  >
+                    {t('lagecheck.link')}
+                  </a>
+                  <Text size="small" type="tertiary" className="listing-detail__lagecheck-attribution">
+                    {t('travelTime.referenceNote')}{' '}
+                    <a
+                      className="listing-detail__lagecheck-link"
+                      href="https://geosci.de/"
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      geosci.de
+                    </a>
+                  </Text>
                 </>
               )}
 
@@ -809,6 +921,21 @@ export default function ListingDetail() {
                       </Text>
                     )}
                   </div>
+                </>
+              )}
+
+              {/* Under the travel times because it belongs to the same half of the page: both are
+                  things Fredy worked out about the address rather than things the portal said about
+                  the flat, and somebody weighing up a place reads them together. Only shown once
+                  the operator has the enrichment on - with it off nothing is ever stored, and an
+                  empty card would read as a fault rather than a setting. */}
+              {hasGeo && connectivityEnabled && (
+                <>
+                  <Divider margin="1.5rem" />
+                  <Text strong style={{ display: 'block', marginBottom: '0.5rem' }}>
+                    {t('connectivity.title')}
+                  </Text>
+                  <ConnectivityCard connectivity={listing.connectivity} />
                 </>
               )}
             </div>

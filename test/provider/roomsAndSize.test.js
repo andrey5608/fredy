@@ -148,13 +148,20 @@ describe('kleinanzeigen rooms and size', () => {
   it('falls back to the detail page when the search result had no tags', async () => {
     const enriched = await kleinanzeigenConfig.fetchDetails(listingWithoutFigures, null);
 
-    expect(enriched).toMatchObject({ size: 89, rooms: 2 });
+    expect(enriched).toMatchObject({ size: 40, rooms: 2 });
   });
 
   it('keeps the figures the search result already provided', async () => {
     const enriched = await kleinanzeigenConfig.fetchDetails({ ...listingWithoutFigures, size: 55, rooms: 1 }, null);
 
     expect(enriched).toMatchObject({ size: 55, rooms: 1 });
+  });
+
+  it('extracts the multi-line description with preserved newlines', async () => {
+    const enriched = await kleinanzeigenConfig.fetchDetails(listingWithoutFigures, null);
+
+    expect(enriched.description).toContain('\n');
+    expect(enriched.description).toMatch(/renovierungsbedarf\.\nAusstattung:/);
   });
 
   it('leaves the figures alone when the detail page cannot be loaded', async () => {

@@ -4,7 +4,15 @@
  */
 
 import { Button, Tooltip } from '@douyinfe/semi-ui-19';
-import { IconBriefcase, IconDelete, IconMapPin, IconStar, IconStarStroked, IconEyeOpened } from '@douyinfe/semi-icons';
+import {
+  IconBriefcase,
+  IconDelete,
+  IconMapPin,
+  IconStar,
+  IconStarStroked,
+  IconEyeOpened,
+  IconRefresh,
+} from '@douyinfe/semi-icons';
 import no_image from '../../assets/no_image.png';
 import { formatEuroPrice } from '../../services/price/priceService.js';
 import * as timeService from '../../services/time/timeService.js';
@@ -12,13 +20,14 @@ import StatusControl from '../listings/StatusControl.jsx';
 import ExternalListingLink from '../listings/ExternalListingLink.jsx';
 import AffordabilityChip from '../listings/AffordabilityChip.jsx';
 import PriceChangeBadge from '../listings/PriceChangeBadge.jsx';
+import PricePerSqmBadge from '../listings/PricePerSqmBadge.jsx';
 import CommuteBadge from '../transit/CommuteBadge.jsx';
 
 import './ListingsTable.less';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 
 /**
- * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, isHiddenView?: boolean, onStatusChange: Function }} props
+ * @param {{ listings: object[], onWatch: Function, onNavigate: Function, onDelete: Function, onRestore?: Function, onReactivate?: Function, isHiddenView?: boolean, onStatusChange: Function }} props
  */
 const ListingsTable = ({
   listings,
@@ -26,6 +35,7 @@ const ListingsTable = ({
   onNavigate,
   onDelete,
   onRestore,
+  onReactivate,
   isHiddenView = false,
   onStatusChange,
 }) => {
@@ -61,13 +71,14 @@ const ListingsTable = ({
           <div className="listingsTable__row__price">
             {item.price ? (
               <>
-                {formatEuroPrice(item.price)}
+                {formatEuroPrice(item.price, locale)}
                 <AffordabilityChip verdict={item.affordabilityVerdict} dealType={item.dealType} />
                 <PriceChangeBadge
                   price={item.price}
                   previousPrice={item.previous_price}
                   changedAt={item.price_changed_at}
                 />
+                <PricePerSqmBadge listing={item} />
               </>
             ) : (
               <span className="listingsTable__row__empty">---</span>
@@ -127,7 +138,7 @@ const ListingsTable = ({
               <Button
                 size="small"
                 icon={<IconEyeOpened />}
-                style={{ color: '#4bab86' }}
+                style={{ color: 'var(--f-success)' }}
                 theme="borderless"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -135,6 +146,23 @@ const ListingsTable = ({
                 }}
               />
             </Tooltip>
+            {/* Mirrors the grid card: only where the alive-checker marked the row gone, and never in
+                the hidden view, where undelete is the action that matters. */}
+            {!item.is_active && !isHiddenView && (
+              <Tooltip content={t('listings.tooltipReactivate')}>
+                <Button
+                  size="small"
+                  icon={<IconRefresh />}
+                  style={{ color: 'var(--f-success)' }}
+                  theme="borderless"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReactivate?.(item.id);
+                  }}
+                  aria-label={t('listings.tooltipReactivate')}
+                />
+              </Tooltip>
+            )}
             {isHiddenView ? (
               <Tooltip content={t('listings.tooltipUndelete')}>
                 <Button
@@ -144,7 +172,7 @@ const ListingsTable = ({
                       <IconDelete />
                     </span>
                   }
-                  style={{ color: '#4bab86' }}
+                  style={{ color: 'var(--f-success)' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -158,7 +186,7 @@ const ListingsTable = ({
                 <Button
                   size="small"
                   icon={<IconDelete />}
-                  style={{ color: '#d4707c' }}
+                  style={{ color: 'var(--f-error)' }}
                   theme="borderless"
                   onClick={(e) => {
                     e.stopPropagation();

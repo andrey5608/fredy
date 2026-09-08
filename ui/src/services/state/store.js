@@ -487,6 +487,21 @@ export const useFredyState = create(
               throw Exception;
             }
           },
+          /**
+           * Mark listings the alive-checker wrongly gave up on as available again.
+           *
+           * Distinct from `restoreListings`, which undoes a deletion the user made themselves.
+           *
+           * @param {string[]} ids
+           */
+          async reactivateListings(ids) {
+            try {
+              await xhrPost('/api/listings/reactivate', { ids });
+            } catch (Exception) {
+              console.error('Error while trying to reactivate listings. Error:', Exception);
+              throw Exception;
+            }
+          },
         },
         userSettings: {
           async getUserSettings() {
@@ -673,6 +688,30 @@ export const useFredyState = create(
               }));
             } catch (Exception) {
               console.error('Error while trying to update language setting. Error:', Exception);
+              throw Exception;
+            }
+          },
+          /**
+           * Store which theme this user wants the interface painted in.
+           *
+           * The document is repainted by App.jsx reacting to this slice rather than from here, so
+           * that a theme arriving from the server on login takes the same path as one picked in
+           * the settings form.
+           *
+           * @param {'dark'|'light'} theme
+           * @returns {Promise<void>}
+           */
+          async setTheme(theme) {
+            try {
+              await xhrPost('/api/user/settings/theme', { theme });
+              set((state) => ({
+                userSettings: {
+                  ...state.userSettings,
+                  settings: { ...state.userSettings.settings, theme },
+                },
+              }));
+            } catch (Exception) {
+              console.error('Error while trying to update theme setting. Error:', Exception);
               throw Exception;
             }
           },

@@ -15,6 +15,8 @@ import {
   clearFilter,
   clearAllFilters,
   describeActiveFilters,
+  filterConfiguredProviders,
+  MOBILE_OPERATOR_KEY,
 } from '../../ui/src/services/listings/listingFilters.js';
 
 /** The URL state as the page opens it. @returns {Object} */
@@ -32,6 +34,67 @@ const defaults = () => ({
 const t = (key, vars) => (vars == null ? key : `${key}:${JSON.stringify(vars)}`);
 
 describe('listingFilters', () => {
+  describe('connectivity', () => {
+    it('counts a speed floor and a fibre requirement as two filters', () => {
+      const values = { ...defaults(), active: null, down: 1000, fiber: true };
+
+      expect(countActiveFilters(values)).toBe(2);
+    });
+
+    it('counts a mobile technology and its operator as one filter', () => {
+      // The operator cannot filter anything on its own - the query needs a technology to turn the
+      // pair into a bit - so counting it separately would report two filters where the user set
+      // one, and the chip row would show a chip nobody can remove on its own.
+      const values = { ...defaults(), active: null, mtech: '5g', [MOBILE_OPERATOR_KEY]: 'dt' };
+
+      expect(countActiveFilters(values)).toBe(1);
+      expect(FILTER_KEYS).not.toContain(MOBILE_OPERATOR_KEY);
+    });
+
+    it('takes the operator along when the technology is cleared', () => {
+      const patch = clearFilter('mtech');
+
+      expect(patch.mtech).toBeNull();
+      expect(patch[MOBILE_OPERATOR_KEY]).toBeNull();
+    });
+
+    it('clears every connectivity filter along with the rest', () => {
+      const cleared = clearAllFilters();
+
+      expect(cleared.down).toBeNull();
+      expect(cleared.fiber).toBeNull();
+      expect(cleared.mtech).toBeNull();
+      expect(cleared[MOBILE_OPERATOR_KEY]).toBeNull();
+    });
+
+    it('names a speed floor with the number in it', () => {
+      const chips = describeActiveFilters({ ...defaults(), active: null, down: 100 }, { t });
+
+      expect(chips).toEqual([{ key: 'down', label: 'listings.filterDownstreamOption:{"mbit":100}' }]);
+    });
+
+    it('names a mobile filter without an operator by the technology alone', () => {
+      const chips = describeActiveFilters({ ...defaults(), active: null, mtech: '5g' }, { t });
+
+      expect(chips).toEqual([{ key: 'mtech', label: 'connectivity.tech.5g' }]);
+    });
+
+    it('names a mobile filter with an operator by both', () => {
+      const chips = describeActiveFilters(
+        { ...defaults(), active: null, mtech: '5g', [MOBILE_OPERATOR_KEY]: 'dt' },
+        { t },
+      );
+
+      expect(chips).toEqual([
+        {
+          key: 'mtech',
+          label:
+            'listings.filterMobileWithOperator:{"technology":"connectivity.tech.5g","operator":"connectivity.operator.dt"}',
+        },
+      ]);
+    });
+  });
+
   describe('counting', () => {
     it('counts the opening view as filtered, because it is', () => {
       expect(countActiveFilters(defaults())).toBe(1);
@@ -39,7 +102,9 @@ describe('listingFilters', () => {
     });
 
     it('counts nothing once everything is cleared', () => {
-      expect(countActiveFilters({ ...defaults(), ...clearAllFilters() })).toBe(0);
+      const cleared = clearAllFilters();
+      expect(cleared.active).toBe(null);
+      expect(countActiveFilters({ ...defaults(), ...cleared })).toBe(0);
     });
 
     it('counts each filter once', () => {
@@ -174,6 +239,78 @@ describe('listingFilters', () => {
     it('produces one chip per counted filter', () => {
       const values = { ...defaults(), provider: 'is24', status: 'applied', watch: true };
       expect(describeActiveFilters(values, { t })).toHaveLength(countActiveFilters(values));
+    });
+  });
+
+  describe('configured providers', () => {
+    const allProviders = [
+      { id: 'immoscout', name: 'ImmoScout24' },
+      { id: 'immowelt', name: 'Immowelt' },
+      { id: 'kleinanzeigen', name: 'Kleinanzeigen' },
+      { id: 'wgGesucht', name: 'WG-Gesucht' },
+    ];
+
+    it('restricts providers to those present in configured jobs', () => {
+      const jobs = [
+        { id: 'j1', name: 'Job 1', provider: [{ id: 'immoscout' }] },
+        { id: 'j2', name: 'Job 2', provider: [{ id: 'immowelt' }] },
+      ];
+      const result = filterConfiguredProviders(allProviders, jobs);
+      expect(result).toEqual([
+        { id: 'immoscout', name: 'ImmoScout24' },
+        { id: 'immowelt', name: 'Immowelt' },
+      ]);
+    });
+
+    it('narrows to the selected job when a job filter is active', () => {
+      const jobs = [
+        { id: 'j1', name: 'Job 1', provider: [{ id: 'immoscout' }] },
+        { id: 'j2', name: 'Job 2', provider: [{ id: 'immowelt' }] },
+      ];
+      const result = filterConfiguredProviders(allProviders, jobs, 'j1');
+      expect(result).toEqual([{ id: 'immoscout', name: 'ImmoScout24' }]);
+    });
+
+    it('preserves an active provider filter even if unconfigured in the current job', () => {
+      const jobs = [{ id: 'j1', name: 'Job 1', provider: [{ id: 'immoscout' }] }];
+      const result = filterConfiguredProviders(allProviders, jobs, 'j1', 'kleinanzeigen');
+      expect(result).toEqual([
+        { id: 'immoscout', name: 'ImmoScout24' },
+        { id: 'kleinanzeigen', name: 'Kleinanzeigen' },
+      ]);
+    });
+
+    it('narrows to providers for which results are present when availableProviders is provided', () => {
+      const jobs = [
+        { id: 'j1', name: 'Job 1', provider: [{ id: 'immoscout' }, { id: 'immowelt' }, { id: 'kleinanzeigen' }] },
+      ];
+      // Results only exist for immoscout
+      const result = filterConfiguredProviders(allProviders, jobs, null, null, ['immoscout']);
+      expect(result).toEqual([{ id: 'immoscout', name: 'ImmoScout24' }]);
+    });
+
+    it('preserves an active provider filter even if no results currently match it', () => {
+      const jobs = [{ id: 'j1', name: 'Job 1', provider: [{ id: 'immoscout' }] }];
+      const result = filterConfiguredProviders(allProviders, jobs, null, 'immowelt', ['immoscout']);
+      expect(result).toEqual([
+        { id: 'immoscout', name: 'ImmoScout24' },
+        { id: 'immowelt', name: 'Immowelt' },
+      ]);
+    });
+
+    it('falls back to all providers when no jobs exist', () => {
+      expect(filterConfiguredProviders(allProviders, [])).toEqual(allProviders);
+      expect(filterConfiguredProviders(allProviders, null)).toEqual(allProviders);
+    });
+
+    it('falls back to all providers when jobs have no configured providers', () => {
+      const jobs = [{ id: 'j1', name: 'Job 1', provider: [] }];
+      expect(filterConfiguredProviders(allProviders, jobs)).toEqual(allProviders);
+    });
+
+    it('handles empty or missing providers list safely', () => {
+      expect(filterConfiguredProviders([], [{ id: 'j1' }])).toEqual([]);
+      expect(filterConfiguredProviders(null, [{ id: 'j1' }])).toEqual([]);
     });
   });
 });

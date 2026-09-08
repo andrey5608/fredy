@@ -28,6 +28,8 @@ describe('storeListings id propagation', () => {
         price REAL,
         size REAL,
         rooms REAL,
+        build_year INTEGER,
+        energy_class TEXT,
         title TEXT,
         image_url TEXT,
         description TEXT,
@@ -41,6 +43,7 @@ describe('storeListings id propagation', () => {
         distances TEXT,
         notes TEXT,
         status TEXT,
+        price_per_sqm REAL,
         UNIQUE (job_id, hash)
       );
     `);

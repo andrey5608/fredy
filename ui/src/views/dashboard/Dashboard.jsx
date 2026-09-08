@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { Button, Col, Row, Toast, Tooltip, Typography } from '@douyinfe/semi-ui-19';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router';
 import {
   IconTerminal,
   IconClock,
@@ -13,6 +13,7 @@ import {
   IconPlayCircle,
   IconPlusCircle,
   IconAlertTriangle,
+  IconExpand,
 } from '@douyinfe/semi-icons';
 
 import { useSelector, useActions } from '../../services/state/store';
@@ -26,6 +27,8 @@ import Headline from '../../components/headline/Headline.jsx';
 
 import './Dashboard.less';
 import { xhrPost, errorMessage } from '../../services/xhr.js';
+import { formatEuroPrice } from '../../services/price/priceService.js';
+import { formatPricePerSqm } from '../../services/listings/marketBenchmark.js';
 import { format } from '../../services/time/timeService.js';
 import { useTranslation, useLocale } from '../../services/i18n/i18n.jsx';
 
@@ -201,7 +204,7 @@ export default function Dashboard() {
       {/* Every card here is a way into the thing it counts. They reported numbers and went
           nowhere, which made the dashboard somewhere you pass through rather than start from. */}
       <Row gutter={[16, 16]} className="dashboard__row">
-        <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+        <Col xs={24} sm={12} md={12} lg={6} xl={6}>
           <KpiCard
             title={t('dashboard.kpiJobs')}
             color="blue"
@@ -211,7 +214,7 @@ export default function Dashboard() {
             onClick={() => navigate('/jobs')}
           />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+        <Col xs={24} sm={12} md={12} lg={6} xl={6}>
           {/* One card, not two: the old pair reported the same number twice whenever nothing had
               gone inactive yet, which is the normal case. */}
           <KpiCard
@@ -225,22 +228,41 @@ export default function Dashboard() {
             onClick={() => navigate('/listings')}
           />
         </Col>
-        <Col xs={24} sm={12} md={8} lg={8} xl={8}>
+        <Col xs={24} sm={12} md={12} lg={6} xl={6}>
           <KpiCard
             title={t('dashboard.kpiMedianPrice')}
             color="purple"
             value={
               !kpis.medianPriceOfListings
                 ? '---'
-                : new Intl.NumberFormat(locale, {
-                    style: 'currency',
-                    currency: 'EUR',
-                    maximumFractionDigits: 0,
-                  }).format(kpis.medianPriceOfListings)
+                : // Rounded before formatting: an even number of listings averages the two middle
+                  // prices, and half a cent of that arithmetic is not a fact about the market.
+                  formatEuroPrice(Math.round(kpis.medianPriceOfListings), locale)
             }
             icon={<IconEuro />}
             description={t('dashboard.kpiMedianPriceDesc')}
             onClick={() => navigate('/listings?sort=price&dir=asc')}
+          />
+        </Col>
+        <Col xs={24} sm={12} md={12} lg={6} xl={6}>
+          {/* The median price next door answers "what do flats cost here", which is a different
+              question from "what does a square metre cost here" - the first moves with how big
+              the flats a search happens to turn up are, the second does not.
+              One deal type only, named in the description: a median taken over rents and purchase
+              prices at once would describe neither. */}
+          <KpiCard
+            title={t('dashboard.kpiMedianSqm')}
+            color="green"
+            value={kpis.medianPricePerSqm == null ? '---' : formatPricePerSqm(kpis.medianPricePerSqm.value, locale)}
+            icon={<IconExpand />}
+            description={
+              kpis.medianPricePerSqm == null
+                ? t('dashboard.kpiMedianSqmPending')
+                : t(`dashboard.kpiMedianSqmDesc.${kpis.medianPricePerSqm.dealType}`, {
+                    count: String(kpis.medianPricePerSqm.sampleSize),
+                  })
+            }
+            onClick={() => navigate('/listings')}
           />
         </Col>
       </Row>
