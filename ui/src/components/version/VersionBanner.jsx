@@ -4,8 +4,8 @@
  */
 
 import { useState } from 'react';
-import { Banner, Button, Modal, Tag, Space, Typography, Descriptions, MarkdownRender } from '@douyinfe/semi-ui-19';
-import { IconAlertCircle, IconArrowRight } from '@douyinfe/semi-icons';
+import { Button, Modal, Tag, Space, Typography, Descriptions, MarkdownRender } from '@douyinfe/semi-ui-19';
+import { IconAlertCircle, IconArrowRight, IconClose } from '@douyinfe/semi-icons';
 import { useSelector } from '../../services/state/store.js';
 
 import './VersionBanner.less';
@@ -16,41 +16,53 @@ const { Text } = Typography;
 export default function VersionBanner() {
   const t = useTranslation();
   const [modalVisible, setModalVisible] = useState(false);
+  // Local only, on purpose: there is no "seen this update" flag on the server, so dismissing just
+  // clears it for the rest of this visit. It comes back on the next full load - and again on every
+  // one after that until the instance is actually upgraded - rather than going quiet forever the
+  // moment one tab happens to close it.
+  const [dismissed, setDismissed] = useState(false);
   const versionUpdate = useSelector((state) => state.versionUpdate.versionUpdate);
+
+  if (dismissed) {
+    return null;
+  }
 
   return (
     <>
-      <Banner
-        className="versionBanner"
-        type="warning"
-        bordered
-        closeIcon={null}
-        description={
-          <div className="versionBanner__bar">
-            <Space spacing={8} align="center">
-              <IconAlertCircle size="small" />
-              <Text strong size="small">
-                {t('version.newVersionAvailable')}
-              </Text>
-              <Tag color="amber" size="small" shape="circle">
-                {versionUpdate.version}
-              </Tag>
-              <Text type="tertiary" size="small">
-                {t('version.currentLabel', { version: versionUpdate.localFredyVersion })}
-              </Text>
-            </Space>
-            <Button
-              theme="borderless"
-              size="small"
-              icon={<IconArrowRight />}
-              iconPosition="right"
-              onClick={() => setModalVisible(true)}
-            >
-              {t('version.releaseNotes')}
-            </Button>
-          </div>
-        }
-      />
+      {/* A nudge, not a banner: it used to span the content area at the top of every page, which
+          gave a one-line "there's an update" the same weight as the demo-mode and debug-logging
+          banners it sat between. Docked to the corner it reads as what it is - a small heads-up
+          that a click on "release notes" is always one tap away from, not a strip the layout has
+          to make room for. */}
+      <div className="versionBanner" role="status">
+        <button className="versionBanner__close" onClick={() => setDismissed(true)} aria-label={t('version.dismiss')}>
+          <IconClose size="small" />
+        </button>
+        <div className="versionBanner__header">
+          <IconAlertCircle size="small" />
+          <Text strong size="small">
+            {t('version.newVersionAvailable')}
+          </Text>
+        </div>
+        <Space spacing={8} align="center" wrap className="versionBanner__meta">
+          <Tag color="amber" size="small" shape="circle">
+            {versionUpdate.version}
+          </Tag>
+          <Text type="tertiary" size="small">
+            {t('version.currentLabel', { version: versionUpdate.localFredyVersion })}
+          </Text>
+        </Space>
+        <Button
+          className="versionBanner__cta"
+          theme="borderless"
+          size="small"
+          icon={<IconArrowRight />}
+          iconPosition="right"
+          onClick={() => setModalVisible(true)}
+        >
+          {t('version.releaseNotes')}
+        </Button>
+      </div>
       <Modal
         title={
           <Space spacing={8} align="center">

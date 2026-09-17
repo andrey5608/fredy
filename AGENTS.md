@@ -216,3 +216,9 @@ Tools: `list_jobs`, `get_job`, `list_listings`, `get_listing`, `get_current_date
 - New features must be tested
 - New features must be properly documented with JsDoc
 - You do **not** commit any changes, you do **not** create a new branch unless I told you so
+
+## Manual/visual verification
+
+- When taking Playwright screenshots (or any other throwaway verification artifact) while checking
+  a UI change, save them under `.playwright-mcp/` (already gitignored) instead of the repo root or
+  a bare relative filename - anything else leaves stray `*.png` files sitting in `git status`.
