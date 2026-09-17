@@ -86,6 +86,18 @@ export default function SystemPage() {
           style={{ maxWidth: 200 }}
         />
       </SegmentPart>
+      <SegmentPart name={t('settings.listingAttachmentMaxMb')} helpText={t('settings.listingAttachmentMaxMbHelp')}>
+        <InputNumber
+          min={1}
+          max={50}
+          placeholder={t('settings.listingAttachmentMaxMbPlaceholder')}
+          value={form.listingAttachmentMaxMb}
+          formatter={(value) => `${value}`.replace(/\D/g, '')}
+          onChange={(value) => setField('listingAttachmentMaxMb', value)}
+          suffix={t('settings.listingAttachmentMaxMbSuffix')}
+          style={{ maxWidth: 200 }}
+        />
+      </SegmentPart>
 
       <SegmentPart name={t('settings.imageCacheRetention')} helpText={t('settings.imageCacheRetentionHelp')}>
         <InputNumber
@@ -96,6 +108,21 @@ export default function SystemPage() {
           formatter={(value) => `${value}`.replace(/\D/g, '')}
           onChange={(value) => setField('imageCacheRetentionDays', value)}
           suffix={t('settings.listingRetentionSuffix')}
+          style={{ maxWidth: 200 }}
+        />
+      </SegmentPart>
+      <SegmentPart
+        name={t('settings.listingAttachmentMaxPerListing')}
+        helpText={t('settings.listingAttachmentMaxPerListingHelp')}
+      >
+        <InputNumber
+          min={1}
+          max={200}
+          placeholder={t('settings.listingAttachmentMaxPerListingPlaceholder')}
+          value={form.listingAttachmentMaxPerListing}
+          formatter={(value) => `${value}`.replace(/\D/g, '')}
+          onChange={(value) => setField('listingAttachmentMaxPerListing', value)}
+          suffix={t('settings.listingAttachmentMaxPerListingSuffix')}
           style={{ maxWidth: 200 }}
         />
       </SegmentPart>
