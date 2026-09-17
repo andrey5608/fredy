@@ -24,6 +24,8 @@ export const SYSTEM_FIELDS = [
   'listingRetentionDays',
   'maxImagesPerListing',
   'imageCacheRetentionDays',
+  'listingAttachmentMaxMb',
+  'listingAttachmentMaxPerListing',
   'sqlitepath',
   'analyticsEnabled',
   'demoMode',
@@ -92,6 +94,8 @@ function toForm(settings) {
     listingRetentionDays: settings?.listingRetentionDays ?? 14,
     maxImagesPerListing: settings?.maxImagesPerListing ?? 20,
     imageCacheRetentionDays: settings?.imageCacheRetentionDays ?? 60,
+    listingAttachmentMaxMb: settings?.listingAttachmentMaxMb ?? 10,
+    listingAttachmentMaxPerListing: settings?.listingAttachmentMaxPerListing ?? 20,
     sqlitepath: settings?.sqlitepath ?? '',
     analyticsEnabled: settings?.analyticsEnabled === true,
     demoMode: settings?.demoMode === true,
@@ -215,6 +219,8 @@ export function useAdminSettings(settings) {
         payload.listingRetentionDays = Number(form.listingRetentionDays);
         payload.maxImagesPerListing = Number(form.maxImagesPerListing);
         payload.imageCacheRetentionDays = Number(form.imageCacheRetentionDays);
+        payload.listingAttachmentMaxMb = Number(form.listingAttachmentMaxMb);
+        payload.listingAttachmentMaxPerListing = Number(form.listingAttachmentMaxPerListing);
       }
       if (fields.includes('connectivityLimitPerRun')) {
         payload.connectivityLimitPerRun = Number(form.connectivityLimitPerRun);
@@ -293,6 +299,12 @@ export function useAdminSettings(settings) {
             Number(form.imageCacheRetentionDays) < 0
           ) {
             return t('settings.toastImageSettingsInvalid');
+          }
+          if (
+            !Number.isInteger(Number(form.listingAttachmentMaxMb)) ||
+            !Number.isInteger(Number(form.listingAttachmentMaxPerListing))
+          ) {
+            return t('settings.toastListingAttachmentInvalid');
           }
           return null;
         },
