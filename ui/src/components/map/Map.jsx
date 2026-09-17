@@ -18,6 +18,7 @@ import {
   TRANSIT_STOPS_LAYER_ID,
 } from './overlayLayers.js';
 import { ensureTransitIcons } from './transitIcons.js';
+import { boundsForCountries, DEFAULT_COUNTRIES } from './countryBounds.js';
 import { keepPopupInView, mountPopupNode } from './popupContent.jsx';
 import DeparturesBoard from '../transit/DeparturesBoard.jsx';
 import { useControllableState } from '../../hooks/useControllableState.js';
@@ -35,10 +36,15 @@ const EXPANDED_BODY_CLASS = 'fredy-map-expanded';
 /** Colour of the pin the user drops in `pickMode`, distinct from listing blue and home red. */
 const PICK_MARKER_COLOR = '#f5a623';
 
-export const GERMANY_BOUNDS = [
-  [5.866, 47.27], // Southwest coordinates
-  [15.042, 55.059], // Northeast coordinates
-];
+/**
+ * Colour of the pins standing for the user's own addresses, on every map that draws them.
+ *
+ * Named rather than repeated at the two call sites, which is all this constant is for: listing pins
+ * are the one blue, so red is unambiguous.
+ *
+ * @type {string}
+ */
+export const HOME_MARKER_COLOR = 'red';
 
 export const STYLES = {
   STANDARD: 'https://tiles.openfreemap.org/styles/bright',
@@ -102,6 +108,9 @@ const GERMANY_CENTER = [10.4515, 51.1657];
  * @param {Object} props
  * @param {[number, number]} [props.initialCenter] - Constructor only; later changes are ignored.
  * @param {number} [props.initialZoom] - Constructor only.
+ * @param {string[]} [props.countries] - ISO 3166-1 alpha-2 codes the map should cover. `maxBounds`
+ *   is the union of their boxes; unlike the two above this one is live, because the job form
+ *   changes it as providers are ticked. Defaults to Germany.
  * @param {'STANDARD'|'SATELLITE'} [props.style] - Controlled basemap.
  * @param {boolean} [props.show3dBuildings] - Controlled 3D buildings overlay.
  * @param {boolean} [props.showTransit] - Controlled public transport overlay.
@@ -132,6 +141,7 @@ const GERMANY_CENTER = [10.4515, 51.1657];
 export default function Map({
   initialCenter = GERMANY_CENTER,
   initialZoom = 4,
+  countries = DEFAULT_COUNTRIES,
   style,
   show3dBuildings,
   showTransit,
@@ -204,7 +214,7 @@ export default function Map({
       style: STYLES[styleValue],
       center: initialCenter,
       zoom: initialZoom,
-      maxBounds: GERMANY_BOUNDS,
+      maxBounds: boundsForCountries(countries),
       antialias: true,
       cooperativeGestures,
     });
@@ -248,6 +258,15 @@ export default function Map({
       }
     };
   }, [mapContainerRef]); // ONLY depend on mapContainerRef - nothing else!
+
+  // The countries in scope can change while the map is up - the job form re-derives them as
+  // providers are ticked - and the map is deliberately never remounted, so the new box has to be
+  // pushed onto the live instance. Keeping the camera where it is: MapLibre clamps it into the new
+  // bounds by itself if it now sits outside them.
+  useEffect(() => {
+    if (!mapRef.current) return;
+    mapRef.current.setMaxBounds(boundsForCountries(countries));
+  }, [countries]);
 
   // Load spatial filter and setup area filter event listeners
   useEffect(() => {

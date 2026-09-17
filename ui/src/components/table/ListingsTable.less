@@ -37,7 +37,7 @@
     transition: background @transition-fast;
 
     &:hover {
-      background: #252525;
+      background: @color-solid;
     }
 
     &--inactive {
@@ -79,6 +79,10 @@
       white-space: nowrap;
       text-align: right;
       font-variant-numeric: tabular-nums;
+      // The cell can carry four things at once now. It grows downwards rather than pushing the
+      // columns beside it out of the row.
+      flex-wrap: wrap;
+      row-gap: 2px;
     }
 
     &__address {
@@ -140,7 +144,7 @@
 
       &:focus-visible {
         outline: none;
-        box-shadow: 0 0 0 2px rgba(192, 86, 74, 0.35);
+        box-shadow: 0 0 0 2px rgb(@color-accent-rgb / 35%);
       }
 
       svg {
