@@ -37,6 +37,9 @@ const Users = function Users() {
       setUserIdToBeRemoved(null);
       await actions.jobsData.getJobs();
       await actions.user.getUsers();
+      // Same staleness as on save: a deleted user must drop out of the job form's sharing picker
+      // right away, not only after the next full page load.
+      await actions.jobsData.getSharableUserList();
     } catch (error) {
       // Same wrong key as everywhere else: the rejection is `{ status, json }`, so `error.error`
       // was undefined and a refused removal rendered an empty toast.

@@ -69,6 +69,11 @@ export default function Navigation({ isAdmin }) {
       // belong to, and a single marked entry among unmarked siblings reads as a different kind of
       // thing rather than as one of them.
       icon: ICONS[node.key],
+      // A destination (key starting with '/') renders as a real `<a href="#...">` via Semi's
+      // built-in `link` prop, not just a `<li onClick>`. That's what gives it a native browser
+      // context menu - "open in new tab", "copy link", middle-click - for free; a group heading
+      // only toggles its children and stays a plain item.
+      ...(node.key.startsWith('/') ? { link: `#${node.key}` } : {}),
       ...(node.children ? { items: toNavItems(node.children) } : {}),
     }));
 
@@ -80,15 +85,30 @@ export default function Navigation({ isAdmin }) {
       items={toNavItems(tree)}
       isCollapsed={collapsed}
       selectedKeys={[resolveActiveKey(tree, location.pathname)]}
-      onClick={({ itemKey }) => {
+      onClick={({ itemKey, domEvent }) => {
         // Use onClick (fires on every click) instead of onSelect (skips the
         // already-selected item) so clicking e.g. "Jobs" while on a nested
         // route like /jobs/edit/:id still navigates back to the list. Only
         // leaf routes navigate; parent items (keys without a leading '/') just
         // toggle their submenu.
-        if (typeof itemKey === 'string' && itemKey.startsWith('/')) {
-          navigate(itemKey);
+        if (typeof itemKey !== 'string' || !itemKey.startsWith('/')) {
+          return;
         }
+        // A modified click (ctrl/cmd/shift) or the middle button means "open elsewhere". Every
+        // leaf item is now also a real link (see `link` below), so the browser already opens it
+        // in a new tab/window on its own - driving the in-app router here too would additionally
+        // navigate the current tab away from under the user.
+        if (domEvent?.ctrlKey || domEvent?.metaKey || domEvent?.shiftKey || domEvent?.button === 1) {
+          return;
+        }
+        // A plain click still has a real `href` underneath it, and left unprevented the browser
+        // runs its own hash navigation right after this handler returns - racing the router's own
+        // update to the same URL. That double write is what made a collapsed group's popover
+        // fail to open and a first click on a link appear to do nothing (it takes hold on the
+        // second click, once the race has settled). Owning the navigation here means the anchor
+        // is only ever a hint to the browser for modified clicks, never a second driver.
+        domEvent?.preventDefault?.();
+        navigate(itemKey);
       }}
       header={
         <div className="navigate__header">

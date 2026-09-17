@@ -58,6 +58,10 @@ const UserMutator = function UserMutator() {
         isAdmin,
       });
       await actions.user.getUsers();
+      // The job form's sharing picker reads a separate, non-admin-only copy of this list that was
+      // fetched once at login - a user created or promoted/demoted just now would otherwise stay
+      // invisible (or visible when it shouldn't be) there until a full page reload.
+      await actions.jobsData.getSharableUserList();
       Toast.success(t('users.mutation.saved'));
       navigate('/admin/users');
     } catch (error) {

@@ -1,15 +1,69 @@
+@import '../../tokens.less';
+
 .versionBanner {
-  margin-bottom: 16px;
+  /*
+   * Docked to the viewport, not the content column, so it keeps its corner whether the page under
+   * it is a form, a table or the fullscreen map. It has to clear the map's own fullscreen overlay
+   * (`.map-shell--expanded`, z-index 900) while staying under every Semi portal - Modal opens at
+   * 1000, Toast at 1010 - so its own "release notes" click still opens a dialog above it.
+   */
+  position: fixed;
+  right: @space-6;
+  top: @space-6;
+  z-index: 910;
+  width: 300px;
+  max-width: calc(100vw - (2 * @space-6));
 
-  .semi-banner-body {
-    padding: 6px 16px;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: @space-2;
+  padding: @space-3 @space-4;
 
-  &__bar {
+  background: @color-elevated;
+  border: 1px solid @color-orange-border;
+  border-radius: @radius-card;
+  box-shadow: @shadow-md;
+
+  &__close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: @color-faint;
+    cursor: pointer;
+    border-radius: @radius-btn;
+    transition:
+      background @transition-fast,
+      color @transition-fast;
+
+    &:hover {
+      background: @color-fill-1;
+      color: @color-muted;
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    // Room for the close button sitting on top of it, so the title never runs under it.
+    padding-right: @space-5;
+    gap: 6px;
+    color: @color-warning;
+  }
+
+  &__meta {
+    flex-wrap: wrap;
+  }
+
+  &__cta {
+    align-self: flex-end;
   }
 
   &__details {

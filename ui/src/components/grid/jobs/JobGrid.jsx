@@ -365,7 +365,11 @@ const JobGrid = () => {
         <Row gutter={[16, 16]}>
           {(jobsData?.result || []).map((job) => (
             <Col key={job.id} xs={24} sm={12} md={12} lg={8} xl={6} xxl={6}>
-              <Card className="jobGrid__card" bodyStyle={{ padding: '12px' }}>
+              <Card
+                className={`jobGrid__card${job.isOnlyShared ? '' : ' jobGrid__card--clickable'}`}
+                bodyStyle={{ padding: '12px' }}
+                onClick={job.isOnlyShared ? undefined : () => navigate(`/jobs/edit/${job.id}`)}
+              >
                 <div className="jobGrid__card__header">
                   <div className="jobGrid__card__name">
                     <span className={`jobGrid__card__dot${job.enabled ? ' jobGrid__card__dot--active' : ''}`} />
@@ -386,6 +390,24 @@ const JobGrid = () => {
                         {t('jobs.cardRunning')}
                       </Tag>
                     )}
+                    <Popover content={getPopoverContent(t('jobs.popoverViewListings'))}>
+                      <div>
+                        <Button
+                          type="tertiary"
+                          size="small"
+                          icon={<IconHome />}
+                          aria-label={t('jobs.popoverViewListings')}
+                          // The card itself opens the job for editing on click - this button sits
+                          // inside that click target, so it must stop the event from reaching the
+                          // card underneath it or a click meant for "show me the listings" would
+                          // also drop the user into the edit form behind it.
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/listings?job=${job.id}`);
+                          }}
+                        />
+                      </div>
+                    </Popover>
                   </div>
                 </div>
 
@@ -421,7 +443,9 @@ const JobGrid = () => {
 
                 <Divider margin="8px" />
 
-                <div className="jobGrid__card__footer">
+                {/* Every control below is its own action (run, edit, delete, toggle...) - none of
+                    them should also fire the card's own "open for editing" click underneath it. */}
+                <div className="jobGrid__card__footer" onClick={(e) => e.stopPropagation()}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <Switch
                       onChange={(checked) => onJobStatusChanged(job.id, checked)}
