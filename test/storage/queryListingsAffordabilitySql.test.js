@@ -99,6 +99,15 @@ describe('queryListings affordability band against real SQLite', () => {
         computed_at INTEGER,
         PRIMARY KEY (listing_id, label)
       );
+      -- Same reasoning as listing_travel_times above: getListingById() now also joins in every
+      -- stored image, so the table has to exist even though nothing here populates it.
+      CREATE TABLE listing_images (
+        id TEXT PRIMARY KEY,
+        listing_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
     `);
 
     const insertJob = db.prepare(

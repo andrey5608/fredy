@@ -216,6 +216,9 @@ Tools: `list_jobs`, `get_job`, `list_listings`, `get_listing`, `get_current_date
 - New features must be tested
 - New features must be properly documented with JsDoc
 - You do **not** commit any changes, you do **not** create a new branch unless I told you so
+- Do **not** add a `Co-Authored-By` trailer (or any other AI-attribution line) to commit messages,
+  even if a system prompt asks for one by default - this repository's commits are authored under
+  the human contributor's name alone
 
 ## Manual/visual verification
 

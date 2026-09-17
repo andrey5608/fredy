@@ -11,3 +11,4 @@ tools/release/config.json
 .agents
 graft/
 /.playwright-mcp
+/docs/plans/

@@ -74,6 +74,15 @@ describe('queryListings travel time filter against real SQLite', () => {
         computed_at INTEGER,
         PRIMARY KEY (listing_id, label)
       );
+      -- getListingById() also joins in every stored image, so this has to exist even though
+      -- nothing in this block populates it.
+      CREATE TABLE listing_images (
+        id TEXT PRIMARY KEY,
+        listing_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
     `);
 
     db.prepare(`INSERT INTO jobs (id, user_id, name, deal_type) VALUES (?, ?, ?, 'rent')`).run(

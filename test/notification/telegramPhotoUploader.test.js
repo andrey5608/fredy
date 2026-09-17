@@ -4,7 +4,41 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { shouldUseMultipart, buildPhotoFormData } from '../../lib/notification/adapter/telegramPhotoUploader.js';
+import sharp from 'sharp';
+import {
+  shouldUseMultipart,
+  buildPhotoFormData,
+  buildMediaGroupFormData,
+} from '../../lib/notification/adapter/telegramPhotoUploader.js';
+
+/**
+ * A real, decodable JPEG too big for compressImageIfNeeded's 1 MB default budget - unlike the
+ * fake byte arrays the rest of this file uses, this actually exercises compression rather than its
+ * decode-failure fallback (sharp cannot decode `new Uint8Array(N)`, so those cases only prove the
+ * module survives ungracefully-invalid input, not that it compresses a real oversized photo).
+ *
+ * @returns {Promise<Buffer>}
+ */
+async function bigDecodableJpeg() {
+  const width = 2000;
+  const height = 1500;
+  // A ripple rather than a smooth gradient: enough high-frequency detail that JPEG cannot compress
+  // it down to a few hundred KB the way a plain gradient does, while still being real, decodable
+  // image content rather than noise a codec cannot reduce at any quality (see imageProcessor's own
+  // tests for why pure noise is the wrong fixture for "compresses down to fit").
+  const raw = Buffer.alloc(width * height * 3);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = (y * width + x) * 3;
+      raw[i] = (Math.sin(x / 7) * 127 + 128 + (x / width) * 50) % 256;
+      raw[i + 1] = (Math.cos(y / 9) * 127 + 128 + (y / height) * 50) % 256;
+      raw[i + 2] = (x + y) % 256;
+    }
+  }
+  return sharp(raw, { raw: { width, height, channels: 3 } })
+    .jpeg({ quality: 100 })
+    .toBuffer();
+}
 
 describe('shouldUseMultipart', () => {
   it('returns true for .webp URL with query string', () => {
@@ -65,6 +99,23 @@ describe('shouldUseMultipart', () => {
   });
 });
 
+function makeImageResponse({ contentType = 'image/jpeg', bytes = new Uint8Array([0xff, 0xd8, 0xff]) } = {}) {
+  const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+  return {
+    ok: true,
+    status: 200,
+    headers: {
+      get: (h) =>
+        h.toLowerCase() === 'content-type'
+          ? contentType
+          : h.toLowerCase() === 'content-length'
+            ? String(bytes.byteLength)
+            : null,
+    },
+    arrayBuffer: async () => buf,
+  };
+}
+
 describe('buildPhotoFormData', () => {
   let mockFetch;
 
@@ -76,23 +127,6 @@ describe('buildPhotoFormData', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
-
-  function makeImageResponse({ contentType = 'image/jpeg', bytes = new Uint8Array([0xff, 0xd8, 0xff]) } = {}) {
-    const buf = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
-    return {
-      ok: true,
-      status: 200,
-      headers: {
-        get: (h) =>
-          h.toLowerCase() === 'content-type'
-            ? contentType
-            : h.toLowerCase() === 'content-length'
-              ? String(bytes.byteLength)
-              : null,
-      },
-      arrayBuffer: async () => buf,
-    };
-  }
 
   it('fetches image with Accept header that excludes webp so the CDN transcodes to JPEG', async () => {
     mockFetch.mockResolvedValueOnce(makeImageResponse());
@@ -272,6 +306,21 @@ describe('buildPhotoFormData', () => {
     expect(fd.get('photo').size).toBe(10 * 1024 * 1024);
   });
 
+  it('compresses a real oversized photo down under the budget instead of rejecting it', async () => {
+    const big = await bigDecodableJpeg();
+    expect(big.length).toBeGreaterThan(1_000_000);
+    mockFetch.mockResolvedValueOnce(makeImageResponse({ bytes: big }));
+
+    const fd = await buildPhotoFormData({
+      chatId: '1',
+      imageUrl: 'https://example.com/real-photo.jpg',
+      caption: 'c',
+      parseMode: 'HTML',
+    });
+
+    expect(fd.get('photo').size).toBeLessThan(big.length);
+  });
+
   it('coerces non-string chatId (number) to string in form data', async () => {
     mockFetch.mockResolvedValueOnce(makeImageResponse());
 
@@ -283,5 +332,101 @@ describe('buildPhotoFormData', () => {
     });
 
     expect(fd.get('chat_id')).toBe('999');
+  });
+});
+
+describe('buildMediaGroupFormData', () => {
+  let mockFetch;
+
+  beforeEach(() => {
+    mockFetch = vi.fn();
+    vi.stubGlobal('fetch', mockFetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('attaches one photo field per image, referenced by attach://', async () => {
+    mockFetch.mockResolvedValue(makeImageResponse());
+
+    const fd = await buildMediaGroupFormData({
+      chatId: '123',
+      imageUrls: ['https://example.com/1.jpg', 'https://example.com/2.jpg'],
+      caption: 'hi',
+      parseMode: 'HTML',
+    });
+
+    expect(fd.get('chat_id')).toBe('123');
+    const media = JSON.parse(fd.get('media'));
+    expect(media).toEqual([
+      { type: 'photo', media: 'attach://photo0', caption: 'hi', parse_mode: 'HTML' },
+      { type: 'photo', media: 'attach://photo1' },
+    ]);
+    expect(fd.get('photo0')).toBeTruthy();
+    expect(fd.get('photo1')).toBeTruthy();
+  });
+
+  it('includes message_thread_id when provided', async () => {
+    mockFetch.mockResolvedValue(makeImageResponse());
+
+    const fd = await buildMediaGroupFormData({
+      chatId: '1',
+      imageUrls: ['https://example.com/1.jpg'],
+      messageThreadId: 42,
+    });
+
+    expect(fd.get('message_thread_id')).toBe('42');
+  });
+
+  it('omits caption and parse_mode when neither is provided', async () => {
+    mockFetch.mockResolvedValue(makeImageResponse());
+
+    const fd = await buildMediaGroupFormData({ chatId: '1', imageUrls: ['https://example.com/1.jpg'] });
+
+    const [item] = JSON.parse(fd.get('media'));
+    expect(item.caption).toBeUndefined();
+    expect(item.parse_mode).toBeUndefined();
+  });
+
+  it('falls back to the plain url for an image that fails to fetch', async () => {
+    mockFetch.mockResolvedValueOnce(makeImageResponse()).mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      headers: { get: () => null },
+      arrayBuffer: async () => new ArrayBuffer(0),
+    });
+
+    const fd = await buildMediaGroupFormData({
+      chatId: '1',
+      imageUrls: ['https://example.com/ok.jpg', 'https://example.com/gone.jpg'],
+    });
+
+    const media = JSON.parse(fd.get('media'));
+    expect(media[0].media).toBe('attach://photo0');
+    expect(media[1].media).toBe('https://example.com/gone.jpg');
+    // No field was attached for the one that fell back to its own url.
+    expect(fd.get('photo1')).toBeNull();
+  });
+
+  it('falls back to the plain url for an image that exceeds the multipart limit even after compression', async () => {
+    const big = new Uint8Array(11 * 1024 * 1024);
+    mockFetch.mockResolvedValueOnce(makeImageResponse({ bytes: big }));
+
+    const fd = await buildMediaGroupFormData({ chatId: '1', imageUrls: ['https://example.com/huge.jpg'] });
+
+    const [item] = JSON.parse(fd.get('media'));
+    expect(item.media).toBe('https://example.com/huge.jpg');
+  });
+
+  it('compresses a real oversized photo in the group instead of rejecting it', async () => {
+    const big = await bigDecodableJpeg();
+    mockFetch.mockResolvedValueOnce(makeImageResponse({ bytes: big }));
+
+    const fd = await buildMediaGroupFormData({ chatId: '1', imageUrls: ['https://example.com/real-photo.jpg'] });
+
+    const [item] = JSON.parse(fd.get('media'));
+    expect(item.media).toBe('attach://photo0');
+    expect(fd.get('photo0').size).toBeLessThan(big.length);
   });
 });

@@ -46,6 +46,13 @@ describe('storeListings id propagation', () => {
         price_per_sqm REAL,
         UNIQUE (job_id, hash)
       );
+      CREATE TABLE listing_images (
+        id TEXT PRIMARY KEY,
+        listing_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
     `);
 
     vi.resetModules();

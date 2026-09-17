@@ -64,6 +64,17 @@
                                             </a>
                                         </td>
                                     </tr>
+                                    {{#if this.extraImages}}
+                                    <tr>
+                                        <td style="padding:8px 18px 0 18px; font-size:0;">
+                                            {{#each this.extraImages}}
+                                            <a href="{{../link}}" target="_blank" style="display:inline-block; width:23%; margin:0 1% 8px 0; vertical-align:top;">
+                                                <img src="{{this}}" alt="" style="width:100%;height:auto;border-radius:4px;background:#1a1a1a;display:block;" />
+                                            </a>
+                                            {{/each}}
+                                        </td>
+                                    </tr>
+                                    {{/if}}
                                 {{/if}}
                                 <tr>
                                     <td style="padding:16px 18px 0 18px;">

@@ -134,6 +134,23 @@ describe('#immobilien.de payload parsing', () => {
     expect(normalized.description).toBeNull();
   });
 
+  it('carries every image, not just the one image mirrors', () => {
+    const normalized = provider.config.normalize({
+      legacyId: 42,
+      title: 'Wohnung',
+      images: ['https://example.org/1.jpg', 'https://example.org/2.jpg', '$undefined'],
+    });
+
+    expect(normalized.images).toEqual(['https://example.org/1.jpg', 'https://example.org/2.jpg']);
+    expect(normalized.image).toBe(normalized.images[0]);
+  });
+
+  it('reports an empty gallery rather than throwing when there are no images at all', () => {
+    const normalized = provider.config.normalize({ legacyId: 42, title: 'Wohnung' });
+    expect(normalized.images).toEqual([]);
+    expect(normalized.image).toBeNull();
+  });
+
   it('reports no price for a listing that is only available on request', () => {
     const normalized = provider.config.normalize({ legacyId: 42, title: 'x', price: 0, priceOnRequest: true });
     expect(normalized.price).toBeNull();

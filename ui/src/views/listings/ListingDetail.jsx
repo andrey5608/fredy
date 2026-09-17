@@ -111,6 +111,10 @@ export default function ListingDetail() {
   const [loading, setLoading] = useState(true);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [notesDraft, setNotesDraft] = useState('');
+  // Which of the listing's images the main frame shows and the lightbox opens on. Reset whenever
+  // the listing itself changes, the same way notesDraft is - otherwise arriving here from a
+  // listing whose fourth photo you were looking at would open the next one on that same index.
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [notesSaving, setNotesSaving] = useState(false);
   const [priceHistory, setPriceHistory] = useState([]);
   // Set while the user is placing the listing by hand: carries the address text they typed, waiting
@@ -160,6 +164,14 @@ export default function ListingDetail() {
   useEffect(() => {
     setNotesDraft(listing?.notes ?? '');
   }, [listing?.id, listing?.notes]);
+
+  useEffect(() => {
+    setActiveImageIndex(0);
+  }, [listing?.id]);
+
+  // Falls back to the single image_url every provider outside the multi-image set still has, so
+  // this reads as one photo rather than an empty gallery for a listing images never got attached to.
+  const images = listing?.images?.length > 0 ? listing.images : listing?.image_url ? [listing.image_url] : [];
 
   // Fetched separately from the listing rather than joined onto it: most views never draw the
   // chart, and a series has no size bound, so it must not ride along on every listing read.
@@ -647,15 +659,38 @@ export default function ListingDetail() {
         <Row>
           <Col span={24} lg={12}>
             <div
-              className={`listing-detail__image-container${!listing.image_url ? ' listing-detail__image-container--placeholder' : ''}`}
+              className={`listing-detail__image-container${images.length === 0 ? ' listing-detail__image-container--placeholder' : ''}`}
             >
               <Image
-                src={listing.image_url ?? no_image}
+                src={images[activeImageIndex] ?? no_image}
                 fallback={<img src={no_image} alt={t('listing.detail.noImageAlt')} />}
                 style={{ width: '100%', height: '100%' }}
-                preview={!!listing.image_url}
+                preview={
+                  images.length > 0
+                    ? { src: images, currentIndex: activeImageIndex, onChange: setActiveImageIndex }
+                    : false
+                }
               />
             </div>
+
+            {images.length > 1 && (
+              <div className="listing-detail__image-thumbnails">
+                {images.map((url, index) => (
+                  <button
+                    key={url}
+                    type="button"
+                    className={`listing-detail__image-thumbnail${
+                      index === activeImageIndex ? ' listing-detail__image-thumbnail--active' : ''
+                    }`}
+                    onClick={() => setActiveImageIndex(index)}
+                    aria-label={t('listing.detail.imageThumbnailLabel', { index: index + 1, count: images.length })}
+                    aria-current={index === activeImageIndex}
+                  >
+                    <img src={url} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="listing-detail__notes">
               <Title heading={4} className="listing-detail__notes-title">

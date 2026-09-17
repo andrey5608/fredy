@@ -13,6 +13,8 @@ vi.mock('../../lib/services/storage/jobStorage.js', () => ({
 vi.mock('../../lib/services/markdown.js', () => ({
   readAdapterReadme: () => '',
 }));
+const mockLogger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+vi.mock('../../lib/services/logger.js', () => ({ default: mockLogger }));
 
 // Helpers to build mock fetch responses.
 function jsonOk(body = { ok: true }) {
@@ -62,6 +64,11 @@ beforeEach(async () => {
 
   mockGlobalFetch = vi.fn();
   vi.stubGlobal('fetch', mockGlobalFetch);
+
+  mockLogger.debug.mockClear();
+  mockLogger.info.mockClear();
+  mockLogger.warn.mockClear();
+  mockLogger.error.mockClear();
 
   ({ send } = await import('../../lib/notification/adapter/telegram.js'));
 });
@@ -335,6 +342,183 @@ describe('telegram send() - mixed batch (regression-safety)', () => {
   });
 });
 
+describe('telegram send() - multi-image albums (sendMediaGroup)', () => {
+  const images = ['https://example.com/1.jpg', 'https://example.com/2.jpg', 'https://example.com/3.jpg'];
+  const listingWith = (imgs) => ({
+    id: 'a',
+    title: 't',
+    link: 'l',
+    address: 'a',
+    price: '',
+    size: '',
+    image: imgs[0],
+    images: imgs,
+  });
+
+  it('sends a sendMediaGroup album when a listing has more than one image', async () => {
+    mockGlobalFetch.mockResolvedValue(imageOk());
+    mockNodeFetch.mockResolvedValueOnce(jsonOk());
+
+    await send({
+      serviceName: 'immowelt',
+      newListings: [listingWith(images)],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    expect(mockGlobalFetch).toHaveBeenCalledTimes(3);
+    expect(mockNodeFetch).toHaveBeenCalledTimes(1);
+    const [url, opts] = mockNodeFetch.mock.calls[0];
+    expect(url).toBe('https://api.telegram.org/botTKN/sendMediaGroup');
+    expect(opts.body).toBeInstanceOf(FormData);
+    const media = JSON.parse(opts.body.get('media'));
+    expect(media).toHaveLength(3);
+    expect(media.every((item) => item.media.startsWith('attach://'))).toBe(true);
+    // Telegram shows one caption per album; only the first item carries it.
+    expect(media[0].caption).toBeTruthy();
+    expect(media[1].caption).toBeUndefined();
+    expect(media[2].caption).toBeUndefined();
+  });
+
+  it('truncates a gallery bigger than 10 photos to a single album instead of splitting it', async () => {
+    // A second sendMediaGroup call cannot carry its own caption (Telegram allows exactly one per
+    // album), so it used to arrive as a bare, uncaptioned photo dump with nothing tying it back to
+    // the listing - truncating to one album keeps every message identifiable instead.
+    const manyImages = Array.from({ length: 11 }, (_, i) => `https://example.com/${i}.jpg`);
+    mockGlobalFetch.mockResolvedValue(imageOk());
+    mockNodeFetch.mockResolvedValueOnce(jsonOk());
+
+    await send({
+      serviceName: 'immowelt',
+      newListings: [listingWith(manyImages)],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    expect(mockNodeFetch).toHaveBeenCalledTimes(1);
+    expect(mockNodeFetch.mock.calls[0][0]).toBe('https://api.telegram.org/botTKN/sendMediaGroup');
+    const group = JSON.parse(mockNodeFetch.mock.calls[0][1].body.get('media'));
+    expect(group).toHaveLength(10);
+    expect(group[0].caption).toBeTruthy();
+  });
+
+  it('falls back to sendMessage when every sendMediaGroup attempt fails', async () => {
+    mockGlobalFetch.mockResolvedValue(imageOk());
+    mockNodeFetch.mockResolvedValueOnce(jsonErr(400, { description: 'group failed' })).mockResolvedValueOnce(jsonOk());
+
+    await send({
+      serviceName: 'immowelt',
+      newListings: [listingWith(images)],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    expect(mockNodeFetch).toHaveBeenCalledTimes(2);
+    expect(mockNodeFetch.mock.calls[1][0]).toBe('https://api.telegram.org/botTKN/sendMessage');
+  });
+
+  it('falls back to a plain url for one image that fails to fetch, without dropping it or failing the album', async () => {
+    mockGlobalFetch
+      .mockResolvedValueOnce(imageOk())
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        headers: { get: () => null },
+        arrayBuffer: async () => new ArrayBuffer(0),
+      })
+      .mockResolvedValueOnce(imageOk());
+    mockNodeFetch.mockResolvedValueOnce(jsonOk());
+
+    await send({
+      serviceName: 'immowelt',
+      newListings: [listingWith(images)],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    const media = JSON.parse(mockNodeFetch.mock.calls[0][1].body.get('media'));
+    expect(media).toHaveLength(3);
+    expect(media[0].media.startsWith('attach://')).toBe(true);
+    expect(media[1].media).toBe(images[1]);
+    expect(media[2].media.startsWith('attach://')).toBe(true);
+  });
+});
+
+describe('telegram send() - 429 rate limiting', () => {
+  const singleImageListing = {
+    id: 'a',
+    title: 't',
+    link: 'l',
+    address: 'a',
+    price: '',
+    size: '',
+    image: 'https://example.com/1.jpg',
+  };
+
+  function rateLimited(retryAfterSeconds) {
+    return jsonErr(429, {
+      ok: false,
+      error_code: 429,
+      description: `Too Many Requests: retry after ${retryAfterSeconds}`,
+      parameters: { retry_after: retryAfterSeconds },
+    });
+  }
+
+  it('waits out the retry_after Telegram reports, then retries the same call instead of falling back', async () => {
+    mockGlobalFetch.mockResolvedValue(imageOk());
+    mockNodeFetch.mockResolvedValueOnce(rateLimited(1)).mockResolvedValueOnce(jsonOk());
+
+    await send({
+      serviceName: 'immowelt',
+      newListings: [singleImageListing],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    // Both calls are the original sendPhoto endpoint - no fallback to sendMessage was needed.
+    expect(mockNodeFetch).toHaveBeenCalledTimes(2);
+    expect(mockNodeFetch.mock.calls[0][0]).toBe('https://api.telegram.org/botTKN/sendPhoto');
+    expect(mockNodeFetch.mock.calls[1][0]).toBe('https://api.telegram.org/botTKN/sendPhoto');
+  }, 10000);
+
+  it('pauses every queued send for the chat while one is waiting out a 429, not just the one that got rate-limited', async () => {
+    mockGlobalFetch.mockResolvedValue(imageOk());
+    // First listing's sendPhoto gets rate-limited; the second listing's sendPhoto (queued right
+    // behind it by p-throttle) must not fire until the cooldown from the first has elapsed.
+    mockNodeFetch.mockResolvedValueOnce(rateLimited(1)).mockResolvedValueOnce(jsonOk()).mockResolvedValueOnce(jsonOk());
+
+    const secondListing = { ...singleImageListing, id: 'b', image: 'https://example.com/2.jpg' };
+    const startedAt = Date.now();
+    await send({
+      serviceName: 'immowelt',
+      newListings: [singleImageListing, secondListing],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    expect(mockNodeFetch).toHaveBeenCalledTimes(3);
+    // The retry (2000ms cooldown) must have elapsed before the whole batch could finish.
+    expect(Date.now() - startedAt).toBeGreaterThanOrEqual(1900);
+  }, 10000);
+
+  it('gives up and falls back to sendMessage when retry_after is not present', async () => {
+    mockGlobalFetch.mockResolvedValue(imageOk());
+    mockNodeFetch
+      .mockResolvedValueOnce(jsonErr(429, { ok: false, error_code: 429, description: 'Too Many Requests' }))
+      .mockResolvedValueOnce(jsonOk());
+
+    await send({
+      serviceName: 'immowelt',
+      newListings: [singleImageListing],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    expect(mockNodeFetch).toHaveBeenCalledTimes(2);
+    expect(mockNodeFetch.mock.calls[1][0]).toBe('https://api.telegram.org/botTKN/sendMessage');
+  });
+});
+
 describe('telegram send() - multiple chat IDs', () => {
   const listing = {
     id: '1',
@@ -387,6 +571,100 @@ describe('telegram send() - multiple chat IDs', () => {
     });
 
     expect(mockNodeFetch).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe('telegram send() - message format', () => {
+  // No `image`, so send() takes the plain sendMessage path and the whole body is easy to inspect
+  // in one place, in `text` rather than split across a `caption` plus a photo/media-group call.
+  async function sentText(listingOverrides) {
+    mockNodeFetch.mockResolvedValueOnce(jsonOk());
+    await send({
+      serviceName: 'immowelt',
+      newListings: [{ id: 'a', title: 'Nice flat', link: 'https://example.com/a', ...listingOverrides }],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+    return JSON.parse(mockNodeFetch.mock.calls[0][1].body).text;
+  }
+
+  it('splits a comma address into District/Street, shows an estimated Warm price next to Cold, and drops the unit from Rooms', async () => {
+    const text = await sentText({
+      address: 'Britzer Damm 111, 12439 Neukölln, Berlin',
+      price: '400 €',
+      size: '65 m²',
+      rooms: '2.5 rooms',
+    });
+
+    expect(text).toContain("<a href='https://example.com/a'><b>Nice flat</b></a>");
+    expect(text).toContain('District: 12439 Neukölln, Berlin');
+    expect(text).toContain('Street: Britzer Damm 111');
+    // 25% Nebenkosten surcharge on the cold rent - see DEFAULT_NEBENKOSTEN_PCT.
+    expect(text).toContain('Warm price: ~500 €');
+    expect(text).toContain('Cold price: 400 €');
+    expect(text).toContain('Sqm: 65 m²');
+    expect(text).toContain('Rooms: 2.5');
+    expect(text).not.toContain('Rooms: 2.5 rooms');
+  });
+
+  it('falls back to District-only when the address has no comma, and shows no Street line', async () => {
+    const text = await sentText({ address: 'Berlin-Spandau' });
+
+    expect(text).toContain('District: Berlin-Spandau');
+    expect(text).not.toContain('Street:');
+  });
+
+  it('omits every field the listing has no value for', async () => {
+    const text = await sentText({ address: null, price: null, size: null, rooms: null });
+
+    expect(text).not.toContain('District:');
+    expect(text).not.toContain('Street:');
+    expect(text).not.toContain('Warm price:');
+    expect(text).not.toContain('Cold price:');
+    expect(text).not.toContain('Sqm:');
+    expect(text).not.toContain('Rooms:');
+  });
+
+  it('puts the Fredy link on its own line after a blank line, once baseUrl is known', async () => {
+    mockNodeFetch.mockResolvedValueOnce(jsonOk());
+    await send({
+      serviceName: 'immowelt',
+      newListings: [{ id: 'a', title: 'Nice flat', link: 'https://example.com/a' }],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+      baseUrl: 'https://fredy.example.com',
+    });
+    const text = JSON.parse(mockNodeFetch.mock.calls[0][1].body).text;
+
+    expect(text).toContain("\n\n<a href='https://fredy.example.com/#/listings/listing/a'>Open in Fredy</a>");
+  });
+});
+
+describe('telegram send() - container log visibility', () => {
+  const listing = {
+    id: 'a',
+    title: 't',
+    link: 'l',
+    address: 'a',
+    price: '',
+    size: '',
+    image: 'https://example.com/x.jpg',
+  };
+
+  it('logs a dispatch summary and a per-send confirmation at "info", not "debug"', async () => {
+    // 'debug' is dropped in production (see logger.js), which is exactly the container Fredy ships
+    // in - a successful send that only logged at 'debug' would never reach `docker logs`.
+    mockNodeFetch.mockResolvedValueOnce(jsonOk());
+
+    await send({
+      serviceName: 'immowelt',
+      newListings: [listing],
+      notificationConfig: [baseConfig],
+      jobKey: 'Berlin',
+    });
+
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining('dispatching 1 new listing(s)'));
+    expect(mockLogger.info).toHaveBeenCalledWith(expect.stringContaining("sent listing 'a' to chat 999"));
   });
 });
 
