@@ -110,6 +110,14 @@ describe('listings published_at', () => {
         is_estimate INTEGER NOT NULL DEFAULT 1,
         PRIMARY KEY (listing_id, label)
       );
+      -- storeListings() always writes a newly-inserted listing's gallery here (migration 46).
+      CREATE TABLE listing_images (
+        id TEXT PRIMARY KEY,
+        listing_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
       INSERT INTO jobs (id, user_id, name, deal_type) VALUES ('job-1', '${USER}', 'Job', 'rent');
     `);
 

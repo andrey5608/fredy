@@ -7,7 +7,7 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 
 /**
- * `listing_images` is a real child table (migration 42), not a JSON column, specifically so that
+ * `listing_images` is a real child table (migration 46), not a JSON column, specifically so that
  * `ON DELETE CASCADE` disposes of a listing's images without any code of its own. That only holds
  * if `PRAGMA foreign_keys = ON` is actually set on the connection - exactly as `SqliteConnection.js`
  * does for the real app - so this suite turns it on explicitly rather than relying on SQLite's
@@ -45,6 +45,7 @@ describe('listing images', () => {
         notes TEXT,
         status TEXT,
         price_per_sqm REAL,
+        published_at INTEGER,
         UNIQUE (job_id, hash)
       );
       CREATE TABLE listing_images (

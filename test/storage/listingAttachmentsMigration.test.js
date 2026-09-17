@@ -10,7 +10,7 @@ import {
   up,
   DEFAULT_LISTING_ATTACHMENT_MAX_MB,
   DEFAULT_LISTING_ATTACHMENT_MAX_PER_LISTING,
-} from '../../lib/services/storage/migrations/sql/44.listing-attachments.js';
+} from '../../lib/services/storage/migrations/sql/43.listing-attachments.js';
 
 /**
  * The whole design rests on the cascade: nothing anywhere unlinks an attachment when a listing goes

@@ -55,6 +55,14 @@ describe('scam signals and overrides in the listings table', () => {
         scam_override TEXT,
         UNIQUE (job_id, hash)
       );
+      -- storeListings() always writes a newly-inserted listing's gallery here (migration 46).
+      CREATE TABLE listing_images (
+        id TEXT PRIMARY KEY,
+        listing_id TEXT NOT NULL,
+        url TEXT NOT NULL,
+        position INTEGER NOT NULL,
+        created_at INTEGER NOT NULL
+      );
     `);
     db.prepare(`INSERT INTO jobs (id, deal_type) VALUES ('job-1', 'rent')`).run();
 
