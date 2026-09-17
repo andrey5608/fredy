@@ -103,6 +103,41 @@ describe('immoscout rooms and size', () => {
   });
 });
 
+describe('immoscout images', () => {
+  it('reads every gallery image off the exposé, not just the search card thumbnail', async () => {
+    const enriched = await immoscoutConfig.fetchDetails({
+      link: 'https://www.immobilienscout24.de/expose/168963883',
+      image: 'https://pictures.immobilienscout24.de/search-card-thumbnail.jpg',
+    });
+
+    expect(enriched.images.length).toBeGreaterThan(1);
+    expect(enriched.images.every((url) => typeof url === 'string' && url.length > 0)).toBe(true);
+    // Left untouched: it is the search card's own titlePicture, set by normalize() before
+    // fetchDetails ever runs, not something this step is meant to overwrite.
+    expect(enriched.image).toBe('https://pictures.immobilienscout24.de/search-card-thumbnail.jpg');
+  });
+
+  it('finds the gallery by section type rather than assuming it is sections[0]', async () => {
+    const reordered = structuredClone(immoscoutDetail);
+    reordered.sections = [...reordered.sections].reverse();
+    vi.stubGlobal('fetch', async () => ({ ok: true, status: 200, json: async () => reordered }));
+
+    const enriched = await immoscoutConfig.fetchDetails({ link: 'https://www.immobilienscout24.de/expose/1' });
+
+    expect(enriched.images.length).toBeGreaterThan(1);
+  });
+
+  it('reports an empty gallery rather than throwing when the exposé has no MEDIA section', async () => {
+    const withoutMedia = structuredClone(immoscoutDetail);
+    withoutMedia.sections = withoutMedia.sections.filter((section) => section.type !== 'MEDIA');
+    vi.stubGlobal('fetch', async () => ({ ok: true, status: 200, json: async () => withoutMedia }));
+
+    const enriched = await immoscoutConfig.fetchDetails({ link: 'https://www.immobilienscout24.de/expose/1' });
+
+    expect(enriched.images).toEqual([]);
+  });
+});
+
 describe('kleinanzeigen rooms and size', () => {
   const listingWithoutFigures = {
     id: 'abc',
@@ -170,5 +205,51 @@ describe('kleinanzeigen rooms and size', () => {
     const enriched = await kleinanzeigenConfig.fetchDetails(listingWithoutFigures, null);
 
     expect(enriched).toMatchObject({ size: null, rooms: null });
+  });
+});
+
+describe('kleinanzeigen images', () => {
+  beforeEach(async () => {
+    puppeteerExtractor.mockResolvedValue(await readFixture('kleinanzeigen_detail.html'));
+  });
+
+  it('reads every gallery image off the detail page, not just the search card thumbnail', async () => {
+    const enriched = await kleinanzeigenConfig.fetchDetails(
+      { id: 'abc', link: '/s-anzeige/x/1', image: 'https://img.kleinanzeigen.de/search-card-thumbnail.jpg' },
+      null,
+    );
+
+    expect(enriched.images.length).toBeGreaterThan(1);
+    expect(enriched.images.every((url) => url.startsWith('https://img.kleinanzeigen.de/'))).toBe(true);
+    // Not the lightbox's own thumbnail strip - that one repeats the same photos as a fixed count
+    // per gallery image, so the two lists happening to be equal length would be the fixture lying.
+    expect(new Set(enriched.images).size).toBe(enriched.images.length);
+  });
+
+  it('falls back to the search card thumbnail when the detail page has no gallery markup', async () => {
+    puppeteerExtractor.mockResolvedValue('<html><body>no gallery here</body></html>');
+
+    const enriched = await kleinanzeigenConfig.fetchDetails(
+      { id: 'abc', link: '/s-anzeige/x/1', image: 'https://img.kleinanzeigen.de/only-thumbnail.jpg' },
+      null,
+    );
+
+    expect(enriched.images).toEqual(['https://img.kleinanzeigen.de/only-thumbnail.jpg']);
+  });
+
+  it('reports an empty gallery when neither the detail page nor the search card has an image', async () => {
+    puppeteerExtractor.mockResolvedValue('<html><body>no gallery here</body></html>');
+
+    const enriched = await kleinanzeigenConfig.fetchDetails({ id: 'abc', link: '/s-anzeige/x/1' }, null);
+
+    expect(enriched.images).toEqual([]);
+  });
+
+  it('leaves images empty when the detail page cannot be loaded at all', async () => {
+    puppeteerExtractor.mockResolvedValue(null);
+
+    const enriched = await kleinanzeigenConfig.fetchDetails({ id: 'abc', link: '/s-anzeige/x/1' }, null);
+
+    expect(enriched.images).toBeUndefined();
   });
 });

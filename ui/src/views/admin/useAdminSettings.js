@@ -22,6 +22,8 @@ export const SYSTEM_FIELDS = [
   'baseUrl',
   'sessionTTL',
   'listingRetentionDays',
+  'maxImagesPerListing',
+  'imageCacheRetentionDays',
   'sqlitepath',
   'analyticsEnabled',
   'demoMode',
@@ -88,6 +90,8 @@ function toForm(settings) {
     baseUrl: settings?.baseUrl ?? '',
     sessionTTL: settings?.sessionTTL ?? '',
     listingRetentionDays: settings?.listingRetentionDays ?? 14,
+    maxImagesPerListing: settings?.maxImagesPerListing ?? 20,
+    imageCacheRetentionDays: settings?.imageCacheRetentionDays ?? 60,
     sqlitepath: settings?.sqlitepath ?? '',
     analyticsEnabled: settings?.analyticsEnabled === true,
     demoMode: settings?.demoMode === true,
@@ -209,6 +213,8 @@ export function useAdminSettings(settings) {
       // string behind, and the backend's bounds checks are stricter than its coercion.
       if (fields.includes('listingRetentionDays')) {
         payload.listingRetentionDays = Number(form.listingRetentionDays);
+        payload.maxImagesPerListing = Number(form.maxImagesPerListing);
+        payload.imageCacheRetentionDays = Number(form.imageCacheRetentionDays);
       }
       if (fields.includes('connectivityLimitPerRun')) {
         payload.connectivityLimitPerRun = Number(form.connectivityLimitPerRun);
@@ -279,6 +285,14 @@ export function useAdminSettings(settings) {
             !Number.isInteger(Number(form.listingRetentionDays))
           ) {
             return t('settings.toastListingRetentionInvalid');
+          }
+          if (
+            !Number.isInteger(Number(form.maxImagesPerListing)) ||
+            Number(form.maxImagesPerListing) < 0 ||
+            !Number.isInteger(Number(form.imageCacheRetentionDays)) ||
+            Number(form.imageCacheRetentionDays) < 0
+          ) {
+            return t('settings.toastImageSettingsInvalid');
           }
           return null;
         },

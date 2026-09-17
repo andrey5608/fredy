@@ -25,6 +25,7 @@ const ALL_TOOLS = [
   'list_listings',
   'get_listing',
   'get_photo_for_listing',
+  'get_photos_for_listing',
   'calculate_financing',
   'get_current_date_time',
 ];

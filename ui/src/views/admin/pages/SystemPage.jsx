@@ -75,6 +75,31 @@ export default function SystemPage() {
         />
       </SegmentPart>
 
+      <SegmentPart name={t('settings.maxImagesPerListing')} helpText={t('settings.maxImagesPerListingHelp')}>
+        <InputNumber
+          min={0}
+          max={50}
+          placeholder={t('settings.maxImagesPerListingPlaceholder')}
+          value={form.maxImagesPerListing}
+          formatter={(value) => `${value}`.replace(/\D/g, '')}
+          onChange={(value) => setField('maxImagesPerListing', value)}
+          style={{ maxWidth: 200 }}
+        />
+      </SegmentPart>
+
+      <SegmentPart name={t('settings.imageCacheRetention')} helpText={t('settings.imageCacheRetentionHelp')}>
+        <InputNumber
+          min={0}
+          max={365}
+          placeholder={t('settings.imageCacheRetentionPlaceholder')}
+          value={form.imageCacheRetentionDays}
+          formatter={(value) => `${value}`.replace(/\D/g, '')}
+          onChange={(value) => setField('imageCacheRetentionDays', value)}
+          suffix={t('settings.listingRetentionSuffix')}
+          style={{ maxWidth: 200 }}
+        />
+      </SegmentPart>
+
       <SegmentPart name={t('settings.sqlitePath')} helpText={t('settings.sqlitePathHelp')}>
         <Banner
           fullMode={false}

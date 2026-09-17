@@ -23,6 +23,7 @@ import { initDemoCleanupCron } from './lib/services/crons/demo-cleanup-cron.js';
 import { initSessionCleanupCron } from './lib/services/crons/session-cleanup-cron.js';
 import { initMcpOAuthCleanupCron } from './lib/services/crons/mcp-oauth-cleanup-cron.js';
 import { initListingRetentionCron } from './lib/services/crons/listing-retention-cron.js';
+import { initImageCacheCleanupCron } from './lib/services/crons/image-cache-cleanup-cron.js';
 import { initPriceTrackingCron } from './lib/services/crons/price-tracking-cron.js';
 import { initTravelTimeCron } from './lib/services/crons/travel-time-cron.js';
 import { initConnectivityCron } from './lib/services/crons/connectivity-cron.js';
@@ -117,6 +118,7 @@ await initDemoCleanupCron();
 await initSessionCleanupCron();
 await initMcpOAuthCleanupCron();
 await initListingRetentionCron();
+await initImageCacheCleanupCron();
 // Schedules only. Unlike the others this one is never run on start: it renders a browser page per
 // listing, and a restart is the worst moment to begin doing that.
 initPriceTrackingCron();
