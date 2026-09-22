@@ -112,12 +112,26 @@ export default function Navigation({ isAdmin }) {
       }}
       header={
         <div className="navigate__header">
-          {/* The heart reads on either theme; the wordmark does not, so it has two cuts. */}
-          <img
-            src={collapsed ? heart : currentTheme() === 'dark' ? logoWhite : logo}
-            width={collapsed ? 30 : 160}
-            alt="Fredy Logo"
-          />
+          {/* A real `<a href>` rather than a plain onClick, for the same reason as the nav items
+              above: it gives the browser's own "open in new tab"/middle-click for free. */}
+          <a
+            href="#/dashboard"
+            className="navigate__home-link"
+            onClick={(event) => {
+              if (event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1) {
+                return;
+              }
+              event.preventDefault();
+              navigate('/dashboard');
+            }}
+          >
+            {/* The heart reads on either theme; the wordmark does not, so it has two cuts. */}
+            <img
+              src={collapsed ? heart : currentTheme() === 'dark' ? logoWhite : logo}
+              width={collapsed ? 30 : 160}
+              alt="Fredy Logo"
+            />
+          </a>
         </div>
       }
       footer={
