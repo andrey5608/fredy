@@ -206,6 +206,13 @@ epoch milliseconds and the sentence the website prints under them - `{"value": 1
 and `lastDeactivationDate` alongside. One request per *new* listing is what a run costs: the
 pipeline enriches only what it has not stored yet.
 
+The same detail carries the advert's whole gallery as `multimedia.images[]` - `url`, `tag`
+(`livingRoom`, ...), `localizedName`, `multimediaId` and `deeplinkUrl` - next to `multimedia.videos`,
+where a search card has only its `thumbnail`. The urls are CloudFront-signed (`Expires`, `Signature`,
+`Key-Pair-Id`) and last about a day, like the thumbnail's. Fredy keeps the first ten (Telegram's
+album limit) in the order given, from the answer it already reads for `modificationDate`, so the
+photos cost no request of their own.
+
 `address` is the line the website prints on a card - "Bilocale in Via Tito Vignoli s.n.c,
 Lorenteggio, Milano" - so an advert read through the api and the same advert scraped off a page
 describe themselves in the same words.

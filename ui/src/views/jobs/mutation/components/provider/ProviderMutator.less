@@ -39,6 +39,23 @@
   &__url {
     margin-top: @space-3;
   }
+
+  &__linkLanguage {
+    display: flex;
+    flex-direction: column;
+    gap: @space-1;
+    margin-top: @space-3;
+
+    label {
+      font-size: @text-sm;
+      font-weight: 600;
+    }
+
+    small {
+      color: @color-muted;
+      font-size: @text-sm;
+    }
+  }
 }
 
 /* Semi sizes this off the widest option rather than the field, so it hung out past the dialog. */

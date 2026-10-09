@@ -17,6 +17,14 @@ import './ProviderMutator.less';
 import { useScreenWidth } from '../../../../../hooks/screenWidth.js';
 import { useTranslation } from '../../../../../services/i18n/i18n.jsx';
 
+/**
+ * The languages idealista's advert links can be opened in. `original` stores nothing the backend
+ * reads as a code, which is what keeps the link as the portal wrote it.
+ */
+const LINK_LANGUAGES = ['en', 'ru', 'es', 'it', 'pt', 'de', 'fr', 'ca', 'uk'];
+const DEFAULT_LINK_LANGUAGE = 'en';
+const ORIGINAL_LINK_LANGUAGE = 'original';
+
 const returnOriginalSelectedProvider = (providerToEdit, provider) => {
   return provider.find((pro) => pro.id === providerToEdit.id);
 };
@@ -33,6 +41,7 @@ export default function ProviderMutator({
   const [selectedProvider, setSelectedProvider] = useState(null);
   const [providerUrl, setProviderUrl] = useState('');
   const [validationMessage, setValidationMessage] = useState(null);
+  const [linkLanguage, setLinkLanguage] = useState(DEFAULT_LINK_LANGUAGE);
 
   useEffect(() => {
     // The message is cleared along with the fields. It used to be left behind, so tripping the
@@ -41,9 +50,11 @@ export default function ProviderMutator({
     if (providerToEdit) {
       setSelectedProvider(returnOriginalSelectedProvider(providerToEdit, provider));
       setProviderUrl(providerToEdit.url ?? '');
+      setLinkLanguage(providerToEdit.linkLanguage ?? DEFAULT_LINK_LANGUAGE);
     } else {
       setSelectedProvider(null);
       setProviderUrl('');
+      setLinkLanguage(DEFAULT_LINK_LANGUAGE);
     }
   }, [providerToEdit, visible]);
 
@@ -72,6 +83,11 @@ export default function ProviderMutator({
     }
   };
 
+  const hasLinkLanguage = selectedProvider?.id === 'idealista';
+
+  /** Only idealista has the setting; for everyone else nothing is stored. */
+  const linkLanguageToStore = () => (hasLinkLanguage ? linkLanguage : undefined);
+
   const onSubmit = (doStore) => {
     if (doStore) {
       const validationResult = validate();
@@ -82,6 +98,7 @@ export default function ProviderMutator({
               url: providerUrl,
               id: selectedProvider.id,
               name: selectedProvider.name,
+              linkLanguage: linkLanguageToStore(),
             }),
             oldProviderToEdit: providerToEdit,
           });
@@ -91,6 +108,7 @@ export default function ProviderMutator({
               url: providerUrl,
               id: selectedProvider.id,
               name: selectedProvider.name,
+              linkLanguage: linkLanguageToStore(),
             }),
           );
         }
@@ -196,6 +214,22 @@ export default function ProviderMutator({
           setValidationMessage(null);
         }}
       />
+
+      {hasLinkLanguage && (
+        <div className="providerMutator__linkLanguage">
+          <label>{t('provider.linkLanguage')}</label>
+          <Select
+            className="providerMutator__fields"
+            value={linkLanguage}
+            onChange={setLinkLanguage}
+            optionList={[
+              ...LINK_LANGUAGES.map((code) => ({ value: code, label: code.toUpperCase() })),
+              { value: ORIGINAL_LINK_LANGUAGE, label: t('provider.linkLanguageOriginal') },
+            ]}
+          />
+          <small>{t('provider.linkLanguageHelp')}</small>
+        </div>
+      )}
     </Modal>
   );
 }
