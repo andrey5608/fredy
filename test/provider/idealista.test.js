@@ -115,7 +115,7 @@ describe('#idealista provider testsuite()', () => {
 
   it('links to the advert rather than to a relative path', () => {
     for (const listing of carrying('link')) {
-      expect(listing.link).toMatch(/^https:\/\/www\.idealista\.(com|it|pt)\/[a-z-]+\/\d+\//);
+      expect(listing.link).toMatch(/^https:\/\/www\.idealista\.(com|it|pt)\/(?:[a-z]{2}\/)?[a-z-]+\/\d+\//);
     }
   });
 
