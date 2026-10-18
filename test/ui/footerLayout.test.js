@@ -80,7 +80,12 @@ describe('FredyFooter.jsx', () => {
 });
 
 describe('App.jsx', () => {
-  it('no longer pushes every page down with a permanent update banner', () => {
-    expect(app).not.toMatch(/VersionBanner/);
+  // The footer shows the version and opens the release notes, so the banner is no longer the only
+  // place an update is announced. This fork keeps it because it can be dismissed: it does not push
+  // every page down for good, which is what upstream's removal was about.
+  it('keeps the update banner, but only the dismissable one', () => {
+    expect(app).toMatch(/VersionBanner/);
+    const banner = fs.readFileSync(path.join(root, 'ui/src/components/version/VersionBanner.jsx'), 'utf-8');
+    expect(banner).toMatch(/setDismissed/);
   });
 });

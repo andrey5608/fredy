@@ -78,7 +78,7 @@ describe('#idealista advert photos', () => {
         image: 'https://img4.idealista.com/thumb',
       });
 
-      expect(listing.images).toEqual([photo(1), photo(2)]);
+      expect(listing.images).toEqual([{ url: photo(1) }, { url: photo(2) }]);
       expect(listing.publishedAt).toBe(1788453292000);
       // The search card's thumbnail is left alone, as immoscout does.
       expect(listing.image).toBe('https://img4.idealista.com/thumb');

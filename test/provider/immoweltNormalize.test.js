@@ -72,12 +72,12 @@ describe('#immowelt normalize', () => {
 
   it('carries the whole gallery, not just the first image', () => {
     expect(mitte.images).toHaveLength(2);
-    expect(mitte.images[0]).toBe(mitte.image);
-    expect(mitte.images.every((url) => url.includes('mms.immowelt.de'))).toBe(true);
+    expect(mitte.images[0].url).toBe(mitte.image);
+    expect(mitte.images.every((image) => image.url.includes('mms.immowelt.de'))).toBe(true);
   });
 
   it('still reports a one-element gallery as an array', () => {
-    expect(spandau.images).toEqual([spandau.image]);
+    expect(spandau.images).toEqual([{ url: spandau.image }]);
   });
 
   it('drops gallery entries with no url rather than passing through undefined', () => {

@@ -111,7 +111,7 @@ describe('immoscout images', () => {
     });
 
     expect(enriched.images.length).toBeGreaterThan(1);
-    expect(enriched.images.every((url) => typeof url === 'string' && url.length > 0)).toBe(true);
+    expect(enriched.images.every((image) => typeof image.url === 'string' && image.url.length > 0)).toBe(true);
     // Left untouched: it is the search card's own titlePicture, set by normalize() before
     // fetchDetails ever runs, not something this step is meant to overwrite.
     expect(enriched.image).toBe('https://pictures.immobilienscout24.de/search-card-thumbnail.jpg');
@@ -220,13 +220,15 @@ describe('kleinanzeigen images', () => {
     );
 
     expect(enriched.images.length).toBeGreaterThan(1);
-    expect(enriched.images.every((url) => url.startsWith('https://img.kleinanzeigen.de/'))).toBe(true);
+    expect(enriched.images.every((image) => image.url.startsWith('https://img.kleinanzeigen.de/'))).toBe(true);
     // Not the lightbox's own thumbnail strip - that one repeats the same photos as a fixed count
     // per gallery image, so the two lists happening to be equal length would be the fixture lying.
-    expect(new Set(enriched.images).size).toBe(enriched.images.length);
+    expect(new Set(enriched.images.map((image) => image.url)).size).toBe(enriched.images.length);
   });
 
-  it('falls back to the search card thumbnail when the detail page has no gallery markup', async () => {
+  // The search card's thumbnail is the listing's own cover (`image`); storage reads it back from
+  // there and leaves it out of the stored gallery, so the provider does not repeat it in `images`.
+  it('leaves the gallery empty when the detail page has no gallery markup, the cover being kept apart', async () => {
     puppeteerExtractor.mockResolvedValue('<html><body>no gallery here</body></html>');
 
     const enriched = await kleinanzeigenConfig.fetchDetails(
@@ -234,7 +236,8 @@ describe('kleinanzeigen images', () => {
       null,
     );
 
-    expect(enriched.images).toEqual(['https://img.kleinanzeigen.de/only-thumbnail.jpg']);
+    expect(enriched.images).toEqual([]);
+    expect(enriched.image).toBe('https://img.kleinanzeigen.de/only-thumbnail.jpg');
   });
 
   it('reports an empty gallery when neither the detail page nor the search card has an image', async () => {

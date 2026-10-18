@@ -15,11 +15,11 @@ describe('#engelVoelkers image gallery', () => {
 
     const normalized = provider.config.normalize(listing);
     expect(normalized.images).toEqual([
-      'https://uploadcare.engelvoelkers.com/aaa/-/format/jpeg/-/resize/1080x/',
-      'https://uploadcare.engelvoelkers.com/bbb/-/format/jpeg/-/resize/1080x/',
-      'https://uploadcare.engelvoelkers.com/ccc/-/format/jpeg/-/resize/1080x/',
+      { url: 'https://uploadcare.engelvoelkers.com/aaa/-/format/jpeg/-/resize/1080x/' },
+      { url: 'https://uploadcare.engelvoelkers.com/bbb/-/format/jpeg/-/resize/1080x/' },
+      { url: 'https://uploadcare.engelvoelkers.com/ccc/-/format/jpeg/-/resize/1080x/' },
     ]);
-    expect(normalized.image).toBe(normalized.images[0]);
+    expect(normalized.image).toBe(normalized.images[0].url);
   });
 
   it('falls back to uploadCareImageIds for a listing that only has the older shape', () => {
@@ -27,8 +27,8 @@ describe('#engelVoelkers image gallery', () => {
 
     const normalized = provider.config.normalize(listing);
     expect(normalized.images).toEqual([
-      'https://uploadcare.engelvoelkers.com/xxx/-/format/jpeg/-/resize/1080x/',
-      'https://uploadcare.engelvoelkers.com/yyy/-/format/jpeg/-/resize/1080x/',
+      { url: 'https://uploadcare.engelvoelkers.com/xxx/-/format/jpeg/-/resize/1080x/' },
+      { url: 'https://uploadcare.engelvoelkers.com/yyy/-/format/jpeg/-/resize/1080x/' },
     ]);
   });
 
@@ -36,7 +36,7 @@ describe('#engelVoelkers image gallery', () => {
     const listing = { id: '1', uploadCareImages: [{ id: 'aaa' }], uploadCareImageIds: ['xxx', 'yyy'] };
 
     expect(provider.config.normalize(listing).images).toEqual([
-      'https://uploadcare.engelvoelkers.com/aaa/-/format/jpeg/-/resize/1080x/',
+      { url: 'https://uploadcare.engelvoelkers.com/aaa/-/format/jpeg/-/resize/1080x/' },
     ]);
   });
 
@@ -44,8 +44,8 @@ describe('#engelVoelkers image gallery', () => {
     const listing = { id: '1', uploadCareImages: [{ id: 'aaa' }, {}, { id: 'ccc' }] };
 
     expect(provider.config.normalize(listing).images).toEqual([
-      'https://uploadcare.engelvoelkers.com/aaa/-/format/jpeg/-/resize/1080x/',
-      'https://uploadcare.engelvoelkers.com/ccc/-/format/jpeg/-/resize/1080x/',
+      { url: 'https://uploadcare.engelvoelkers.com/aaa/-/format/jpeg/-/resize/1080x/' },
+      { url: 'https://uploadcare.engelvoelkers.com/ccc/-/format/jpeg/-/resize/1080x/' },
     ]);
   });
 

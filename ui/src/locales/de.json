@@ -858,7 +858,7 @@
   "provider.selectPlaceholder": "Anbieter auswählen",
   "provider.urlPlaceholder": "Anbieter-URL",
   "provider.linkLanguage": "Sprache der Ergebnis-Links",
-  "provider.linkLanguageOriginal": "Original (wie vom Portal geliefert)",
+  "provider.linkLanguageOriginal": "Original (wie vom Anbieter geliefert)",
   "provider.linkLanguageHelp": "Anzeigen-Links werden in dieser Sprache geöffnet, z. B. idealista.com/en/inmueble/… Die Anzeige selbst bleibt unverändert.",
   "provider.validationSelectAndUrl": "Bitte wähle einen Anbieter aus und kopiere die Browser-URL in das Textfeld, nachdem du deine Suchparameter konfiguriert hast.",
   "provider.stepChooseTitle": "Anbieter wählen und dort suchen",

@@ -5,17 +5,20 @@
 
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
+import { up as createListingMedia } from '../../lib/services/storage/migrations/sql/48.listing-media.js';
+import { imageIdFor } from '../../lib/services/images/imageIds.js';
 
 /**
- * `listing_images` is a real child table (migration 46), not a JSON column, specifically so that
- * `ON DELETE CASCADE` disposes of a listing's images without any code of its own. That only holds
- * if `PRAGMA foreign_keys = ON` is actually set on the connection - exactly as `SqliteConnection.js`
- * does for the real app - so this suite turns it on explicitly rather than relying on SQLite's
- * off-by-default behaviour.
+ * What this fork adds on top of upstream's gallery storage (`listing_media`, migration 48): the
+ * operator's `maxImagesPerListing` cap, and the ids the image proxy and its disk cache know a
+ * picture by. `ON DELETE CASCADE` disposes of a listing's gallery only if `PRAGMA foreign_keys = ON`
+ * is set on the connection - exactly as `SqliteConnection.js` does for the real app - so this suite
+ * turns it on explicitly rather than relying on SQLite's off-by-default behaviour.
  */
 describe('listing images', () => {
   let db;
   let listingsStorage;
+  let media;
 
   beforeEach(async () => {
     db = new Database(':memory:');
@@ -27,6 +30,8 @@ describe('listing images', () => {
         provider TEXT,
         job_id TEXT,
         price REAL,
+        charges_included INTEGER,
+        charges REAL,
         size REAL,
         rooms REAL,
         build_year INTEGER,
@@ -47,13 +52,6 @@ describe('listing images', () => {
         price_per_sqm REAL,
         published_at INTEGER,
         UNIQUE (job_id, hash)
-      );
-      CREATE TABLE listing_images (
-        id TEXT PRIMARY KEY,
-        listing_id TEXT NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
-        url TEXT NOT NULL,
-        position INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
       );
       CREATE TABLE jobs (id TEXT PRIMARY KEY, name TEXT, deal_type TEXT);
       CREATE TABLE watch_list (id TEXT PRIMARY KEY, listing_id TEXT, user_id TEXT);
@@ -76,6 +74,7 @@ describe('listing images', () => {
         PRIMARY KEY (listing_id, label)
       );
     `);
+    createListingMedia(db);
 
     vi.resetModules();
     vi.doMock('../../lib/services/storage/SqliteConnection.js', () => ({
@@ -87,6 +86,7 @@ describe('listing images', () => {
       },
     }));
     vi.doMock('../../lib/services/similarity-check/similarityCache.js', () => ({ removeEntry: vi.fn() }));
+    media = await import('../../lib/services/storage/listingMediaStorage.js');
     listingsStorage = await import('../../lib/services/storage/listingsStorage.js');
   });
 
@@ -107,116 +107,91 @@ describe('listing images', () => {
     ...overrides,
   });
 
-  const imagesFor = (listingId) =>
-    db
-      .prepare('SELECT url FROM listing_images WHERE listing_id = ? ORDER BY position')
-      .all(listingId)
-      .map((row) => row.url);
+  const urls = (count, from = 0) => Array.from({ length: count }, (_, i) => `https://cdn.example.com/${from + i}.jpg`);
+  // The gallery as stored: without the cover, which `image_url` keeps.
+  const galleryOf = (listingId) =>
+    media.getListingGallery(listingId, 'https://cdn.example.com/0.jpg').map((i) => i.url);
 
-  it('stores every image a provider found, in order', () => {
-    const images = ['https://cdn.example.com/0.jpg', 'https://cdn.example.com/1.jpg', 'https://cdn.example.com/2.jpg'];
-    const listings = [listing('hash-1', { images })];
+  it('stores the pictures after the cover, in order', () => {
+    const listings = [listing('hash-1', { images: urls(3) })];
     listingsStorage.storeListings('job-1', 'immowelt', listings);
 
-    expect(imagesFor(listings[0].id)).toEqual(images);
+    expect(galleryOf(listings[0].id)).toEqual(urls(2, 1));
   });
 
-  it('caps stored images at the configured maximum', () => {
-    const images = Array.from({ length: 5 }, (_, i) => `https://cdn.example.com/${i}.jpg`);
-    const listings = [listing('hash-1', { images })];
-    listingsStorage.storeListings('job-1', 'immowelt', listings, { maxImagesPerListing: 2 });
+  it('caps the gallery at the configured maximum', () => {
+    const listings = [listing('hash-1', { images: urls(5) })];
+    listingsStorage.storeListings('job-1', 'immowelt', listings, { maxImagesPerListing: 3 });
 
-    expect(imagesFor(listings[0].id)).toEqual(images.slice(0, 2));
+    // Three pictures in all: the cover and the two after it.
+    expect(galleryOf(listings[0].id)).toEqual(urls(2, 1));
   });
 
   it('defaults the cap when the caller does not pass one', () => {
-    const images = Array.from({ length: 25 }, (_, i) => `https://cdn.example.com/${i}.jpg`);
-    const listings = [listing('hash-1', { images })];
+    const listings = [listing('hash-1', { images: urls(25) })];
     listingsStorage.storeListings('job-1', 'immowelt', listings);
 
-    expect(imagesFor(listings[0].id)).toHaveLength(20);
+    expect(galleryOf(listings[0].id)).toHaveLength(19);
   });
 
-  it('drops duplicate and empty urls', () => {
-    const images = ['https://cdn.example.com/0.jpg', 'https://cdn.example.com/0.jpg', '', null];
-    const listings = [listing('hash-1', { images })];
-    listingsStorage.storeListings('job-1', 'immowelt', listings);
-
-    expect(imagesFor(listings[0].id)).toEqual(['https://cdn.example.com/0.jpg']);
-  });
-
-  it('stores nothing extra for a listing without an images array', () => {
+  it('stores nothing for a listing without an images array', () => {
     const listings = [listing('hash-1')];
     listingsStorage.storeListings('job-1', 'immowelt', listings);
 
-    expect(imagesFor(listings[0].id)).toEqual([]);
+    expect(galleryOf(listings[0].id)).toEqual([]);
   });
 
-  it('does not duplicate images when a listing already exists (conflict)', () => {
-    const images = ['https://cdn.example.com/0.jpg'];
-    listingsStorage.storeListings('job-1', 'immowelt', [listing('dup', { images })]);
-    const second = [listing('dup', { images: [...images, 'https://cdn.example.com/1.jpg'] })];
-    listingsStorage.storeListings('job-1', 'immoscout', second);
+  describe('getImageById', () => {
+    const stored = () => {
+      const listings = [listing('hash-1', { images: urls(3) })];
+      listingsStorage.storeListings('job-1', 'immowelt', listings);
+      return listings[0].id;
+    };
 
-    // The row already existed, so the second batch's images are never inserted - matching how the
-    // rest of storeListings treats a conflict as "this row is not this batch's to write".
-    expect(imagesFor(second[0].id)).toEqual(images);
-  });
+    it('finds the cover and every stored picture by the id the proxy hands out', () => {
+      const id = stored();
 
-  it('merges stored images into getListingById, in position order', () => {
-    const images = ['https://cdn.example.com/0.jpg', 'https://cdn.example.com/1.jpg'];
-    const listings = [listing('hash-1', { images })];
-    listingsStorage.storeListings('job-1', 'immowelt', listings);
+      for (const url of urls(3)) {
+        expect(listingsStorage.getImageById(imageIdFor(id, url))).toEqual({
+          id: imageIdFor(id, url),
+          listing_id: id,
+          url,
+        });
+      }
+    });
 
-    const row = listingsStorage.getListingById(listings[0].id, null, true);
-    expect(row.images).toEqual(images);
-  });
+    it('does not know a picture the listing never had', () => {
+      const id = stored();
 
-  it('falls back to image_url when a listing has no listing_images rows', () => {
-    const listings = [listing('hash-1')];
-    listingsStorage.storeListings('job-1', 'immowelt', listings);
+      expect(listingsStorage.getImageById(imageIdFor(id, 'https://cdn.example.com/other.jpg'))).toBeNull();
+    });
 
-    const row = listingsStorage.getListingById(listings[0].id, null, true);
-    expect(row.images).toEqual(['https://cdn.example.com/0.jpg']);
-  });
+    it('does not know an id that names no listing, or is not an id at all', () => {
+      stored();
 
-  it('falls back to an empty array when neither images nor image_url exist', () => {
-    const listings = [listing('hash-1', { image: null })];
-    listingsStorage.storeListings('job-1', 'immowelt', listings);
+      expect(listingsStorage.getImageById(imageIdFor('no-such-listing', urls(1)[0]))).toBeNull();
+      expect(listingsStorage.getImageById('no-such-image')).toBeNull();
+      expect(listingsStorage.getImageById('')).toBeNull();
+    });
 
-    const row = listingsStorage.getListingById(listings[0].id, null, true);
-    expect(row.images).toEqual([]);
-  });
+    it('cannot be pointed at another listing by splicing ids together', () => {
+      const first = stored();
+      const second = [listing('hash-2', { images: urls(2, 100), image: 'https://cdn.example.com/100.jpg' })];
+      listingsStorage.storeListings('job-1', 'immowelt', second);
 
-  it('looks up one stored image by its own id, for the image proxy', () => {
-    const images = ['https://cdn.example.com/0.jpg', 'https://cdn.example.com/1.jpg'];
-    const listings = [listing('hash-1', { images })];
-    listingsStorage.storeListings('job-1', 'immowelt', listings);
-
-    const [firstRow] = db
-      .prepare('SELECT id, url FROM listing_images WHERE listing_id = ? ORDER BY position')
-      .all(listings[0].id);
-
-    expect(listingsStorage.getImageById(firstRow.id)).toEqual({
-      id: firstRow.id,
-      listing_id: listings[0].id,
-      url: firstRow.url,
+      expect(listingsStorage.getImageById(imageIdFor(first, 'https://cdn.example.com/101.jpg'))).toBeNull();
     });
   });
 
-  it('returns null for an image id that does not exist', () => {
-    expect(listingsStorage.getImageById('no-such-image')).toBeNull();
-  });
-
-  it('deletes a listing images along with it (cascade)', () => {
-    const images = ['https://cdn.example.com/0.jpg', 'https://cdn.example.com/1.jpg'];
-    const listings = [listing('hash-1', { images })];
+  it('deletes a listing gallery along with it (cascade)', () => {
+    const listings = [listing('hash-1', { images: urls(3) })];
     listingsStorage.storeListings('job-1', 'immowelt', listings);
-    expect(imagesFor(listings[0].id)).toHaveLength(2);
+    expect(galleryOf(listings[0].id)).toHaveLength(2);
 
     listingsStorage.deleteListingsById([listings[0].id], true);
 
-    expect(imagesFor(listings[0].id)).toEqual([]);
+    expect(galleryOf(listings[0].id)).toEqual([]);
+    expect(db.prepare('SELECT 1 FROM listing_media WHERE listing_id = ?').get(listings[0].id)).toBeUndefined();
     expect(db.prepare('SELECT 1 FROM listings WHERE id = ?').get(listings[0].id)).toBeUndefined();
   });
 });
