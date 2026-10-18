@@ -33,6 +33,31 @@ Challenges:
 1. Identifying the necessary endpoints and parameters required to perform searches
 2. Mapping the mobile API parameters to their web counterparts to maintain compatibility with existing search URLs
 
+### One API, several national sites
+
+The host is German and so is every endpoint below, but the index behind it is not. Austrian
+listings are syndicated into it and are reached by prefixing the geocode with `/at` instead of
+`/de`. Nothing else about a request changes: same host, same user agents, same response shape,
+same numeric ids, same German attribute labels.
+
+| geocode | `apartmentrent` |
+|---|---:|
+| `/at` | 10606 |
+| `/at/wien/wien` | 3043 |
+| `/at/steiermark/graz` | 1407 |
+
+Not every type carries Austrian inventory. `apartmentrent`, `apartmentbuy`, `houserent`,
+`housebuy` and `livingbuysite` do; `flatshareroom`, `garagerent`, `garagebuy`, `investment`,
+`shorttermaccommodation`, `assistedliving` and `compulsoryauction` answer 200 with zero results.
+
+An Austrian exposé states `www.immobilienscout24.de/expose/{id}` as its **own** share link, so the
+German page is where the advert lives. The Austrian website's `/expose/{24 hex}` ids are a separate
+identifier space that this API does not know.
+
+**Switzerland is not in this index.** `/ch`, `/ch/zuerich` and `/ch/bern` answer 200 with zero
+results, `/ch/zurich/zurich` and `/ch/geneve` answer 412. `immoscout24.ch` belongs to a different
+company running a different platform and shares nothing with this API.
+
 ## Api Specs
 
 #### Search for Listings
@@ -91,7 +116,8 @@ The translation lives in `/lib/services/immoscout/`, split so that extending it 
 
 | File | Holds | Edit it when |
 |---|---|---|
-| [`web-paths.js`](https://github.com/orangecoding/fredy/blob/master/lib/services/immoscout/web-paths.js) | what a path segment means, plus the per-type defaults | ImmoScout adds or retires a search path |
+| [`web-paths.js`](https://github.com/orangecoding/fredy/blob/master/lib/services/immoscout/web-paths.js) | what a path segment means on the German site, plus the per-type defaults | ImmoScout adds or retires a search path |
+| [`at-paths.js`](https://github.com/orangecoding/fredy/blob/master/lib/services/immoscout/at-paths.js) | the same for the Austrian site, plus its own query parameter vocabulary | the Austrian site adds or retires a search path or a filter |
 | [`param-support.js`](https://github.com/orangecoding/fredy/blob/master/lib/services/immoscout/param-support.js) | which parameter each type accepts, and the dropping | a filter is new, or a type starts/stops accepting one |
 | [`real-estate-types.js`](https://github.com/orangecoding/fredy/blob/master/lib/services/immoscout/real-estate-types.js) | the `realestatetype` vocabulary and its groupings | a new real estate type shows up |
 | [`shape.js`](https://github.com/orangecoding/fredy/blob/master/lib/services/immoscout/shape.js) | the `shape` parameter of a drawn area | the shape encoding changes |
@@ -131,6 +157,15 @@ The last path segment of a web URL names the type. These are the ones Fredy supp
 | `wohnen-auf-zeit` | `shorttermaccommodation` |
 | `seniorenwohnen` | `assistedliving` |
 | `zwangsversteigerung` | `compulsoryauction` |
+
+Two paths name **several types at once** - the "Alle Immobilien" searches - and the mobile API takes them as a comma separated list:
+
+| Web path | `realestatetype` |
+|---|---|
+| `immobilie-kaufen` | `apartmentbuy,housebuy` |
+| `immobilie-mieten` | `apartmentrent,houserent` |
+
+For such a search the API judges the two halves of a parameter differently. The **name** only has to be accepted by one of the types - `immobilie-kaufen?apartmenttypes=penthouse` answers 200 and narrows the apartments while leaving the houses alone - but the **value** has to hold for every type that takes the parameter: `immobilie-mieten?pricetype=calculatedtotalrent` answers 412, because `houserent` has no "Warmmiete". Neither does the combined rent search carry the `swapflat` default that `wohnung-mieten` has; the website sends none either.
 
 The commercial types (`office`, `store`, `gastronomy`, `tradesite`, `specialpurpose`, reachable via `buero-mieten`, `gastronomie-mieten`, `bauernhof-kaufen`, ...) are **deliberately not supported**: their `search/list` answers contain no `EXPOSE_RESULT` items, so there is nothing for the provider to read.
 
@@ -220,7 +255,7 @@ Values matter as well as names. `pricetype=rentpermonth` works for both rent typ
 
 ### Defaults and precedence
 
-Rent apartment searches hide exchange flats (`exclusioncriteria=swapflat`) unless the URL says otherwise; no other type carries a default. Where several sources set the same parameter, the later one wins - **query parameter beats path filter beats default** - which is what the website itself does:
+Rent apartment searches hide exchange flats (`exclusioncriteria=swapflat`) unless the URL says otherwise; no other type, and no search naming several types, carries a default. Where several sources set the same parameter, the later one wins - **query parameter beats path filter beats default** - which is what the website itself does:
 
 ```
 wohnung-mieten?exclusioncriteria=projectlisting  -> projectlisting alone, exchange flats come back
@@ -235,5 +270,13 @@ haus-mit-garage-kaufen?equipment=cellar          -> cellar alone, not cellar plu
 | `…?geocodes=1276010037,1276010014` | `searchType=region&geocodes=1276010037,1276010014` (districts replace the path's city) |
 | `/Suche/radius/<type>?geocoordinates=lat;lng;km` | `searchType=radius&geocoordinates=lat;lng;km` |
 | `/Suche/shape/<type>?shape=…` | `searchType=shape&shape=<polyline>` |
+| `/regional/<state>/<municipality>/<type>` (Austrian site) | `searchType=region&geocodes=/at/<state>/<municipality>` |
+| `/regional/oesterreich/<type>` (Austrian site) | `searchType=region&geocodes=/at` - the API rejects `/at/oesterreich` |
+
+The two national namespaces are not equally deep. `/de` takes three levels, so
+`/de/berlin/berlin/mitte` resolves to Berlin-Mitte; `/at` takes two and answers 412 for a third,
+whichever way a Viennese district is spelled (`1-bezirk-innere-stadt`, `innere-stadt`, `1010`,
+`wien-innere-stadt` were all tried). Austrian searches below the municipality therefore cannot be
+expressed at all and have to be widened.
 
 The `shape` parameter arrives in two flavours: base64 wrapped (map editor links, padded with `.` instead of `=`) or as a bare Google Encoded Polyline (shapes drawn by hand). Decoding a bare polyline does not fail loudly, it produces invalid UTF-8 and the API answers `400 Cannot parse shape`, so the translator only decodes input that could be base64 and only keeps a decode that looks like a polyline.

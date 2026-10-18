@@ -10,6 +10,7 @@ import { FieldLabel, NumberField } from './ProfileForm.jsx';
 import BudgetChart from '../charts/BudgetChart.jsx';
 import { formatEuro } from '../../../components/cards/chartTheme.js';
 import { DEFAULT_NEBENKOSTEN_PCT } from '../../../services/finance/constants.js';
+import { rentCeilingFacts } from '../../../services/finance/rentBasis.js';
 import { useTranslation, useLocale } from '../../../services/i18n/i18n.jsx';
 
 import './FinanceForms.less';
@@ -37,28 +38,22 @@ export default function RentPanel({ profile, budget, thresholds, onChange }) {
   const t = useTranslation();
   const locale = useLocale();
 
-  // None of these four is self-explanatory from its label alone: two are ceilings measured on
-  // different figures (cold as listed, warm as paid), one is the band above the comfortable
-  // ceiling, and one is plain cash flow that ignores the rule entirely.
-  const facts =
-    thresholds == null || budget == null
-      ? []
-      : [
-          {
-            key: 'maxCold',
-            value: formatEuro(thresholds.affordableMaxRent, locale),
-            emphasis: true,
-          },
-          { key: 'maxWarm', value: formatEuro(thresholds.warmAffordable, locale), emphasis: true },
-          { key: 'stretchCold', value: formatEuro(thresholds.stretchMaxRent, locale), emphasis: false },
-          { key: 'disposable', value: formatEuro(budget.disposable, locale), emphasis: false },
-        ];
+  // None of these five is self-explanatory from its label alone: two pairs of ceilings measured on
+  // different figures (cold as most listings quote it, warm as paid and as a rent quoted with the
+  // charges in it is judged), each with the band above the comfortable one, and plain cash flow
+  // that ignores the rule entirely.
+  const facts = rentCeilingFacts(thresholds, budget, { locale, formatEuro });
 
   // The one input and the ceilings it moves share a card. Two cards for a single percentage
   // field made the tab look like a form with a report attached, when it is really one question.
   return (
-    <SegmentPart name={t('finance.rent.resultTitle')} helpText={t('finance.rent.resultHelp')}>
-      <div className="financeForm__grid">
+    <SegmentPart
+      name={t('finance.rent.resultTitle')}
+      helpText={t('finance.rent.resultHelp')}
+      helpMode="popover"
+      action={<span className="financeStep">{t('finance.form.step', { n: '2' })}</span>}
+    >
+      <div className="financeForm__fields">
         {/* Left blank on purpose falls back to the default surcharge, so a user who does not
             know their Nebenkosten still gets a realistic warm rent instead of a cold one. */}
         <NumberField

@@ -12,6 +12,11 @@ vi.mock('../../lib/services/storage/listingsStorage.js', () => ({
   queryListings: vi.fn(() => ({ totalNumber: 0, page: 1, result: [] })),
   getListingById,
 }));
+const getListingGallery = vi.fn(() => []);
+vi.mock('../../lib/services/storage/listingMediaStorage.js', () => ({
+  getListingGallery,
+  getListingPicture: vi.fn(),
+}));
 vi.mock('../../lib/mcp/mcpAuthentication.js', () => ({
   authenticateToolCall: vi.fn(() => ({ user: { id: 'u1', isAdmin: false } })),
   checkJobAccess: vi.fn(() => true),
@@ -50,10 +55,8 @@ describe('get_photos_for_listing', () => {
       'fetch',
       vi.fn(async () => imageResponse()),
     );
-    getListingById.mockReturnValue({
-      id: 'a',
-      images: ['https://cdn.example.com/0.gif', 'https://cdn.example.com/1.gif'],
-    });
+    getListingById.mockReturnValue({ id: 'a', image_url: 'https://cdn.example.com/0.gif' });
+    getListingGallery.mockReturnValue([{ url: 'https://cdn.example.com/1.gif' }]);
 
     const result = await callTool('get_photos_for_listing', { listingId: 'a' });
 
@@ -63,7 +66,8 @@ describe('get_photos_for_listing', () => {
   });
 
   it('errors when the listing has no stored images', async () => {
-    getListingById.mockReturnValue({ id: 'a', images: [] });
+    getListingById.mockReturnValue({ id: 'a', image_url: null });
+    getListingGallery.mockReturnValue([]);
 
     const result = await callTool('get_photos_for_listing', { listingId: 'a' });
 
@@ -83,10 +87,8 @@ describe('get_photos_for_listing', () => {
       'fetch',
       vi.fn().mockResolvedValueOnce(imageResponse()).mockResolvedValueOnce({ ok: false, status: 404 }),
     );
-    getListingById.mockReturnValue({
-      id: 'a',
-      images: ['https://cdn.example.com/0.gif', 'https://cdn.example.com/gone.gif'],
-    });
+    getListingById.mockReturnValue({ id: 'a', image_url: 'https://cdn.example.com/0.gif' });
+    getListingGallery.mockReturnValue([{ url: 'https://cdn.example.com/gone.gif' }]);
 
     const result = await callTool('get_photos_for_listing', { listingId: 'a' });
 

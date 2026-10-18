@@ -5,15 +5,8 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  Card,
-  Col,
-  Row,
   Button,
-  Typography,
-  Divider,
   Switch,
-  Popover,
-  Tag,
   Input,
   Select,
   Pagination,
@@ -25,21 +18,14 @@ import {
 } from '@douyinfe/semi-ui-19';
 import {
   IconAlertTriangle,
-  IconDelete,
-  IconDescend2,
-  IconEdit,
-  IconCopy,
-  IconPlayCircle,
-  IconBriefcase,
-  IconBell,
+  IconHome,
   IconSearch,
   IconArrowUp,
   IconArrowDown,
-  IconHome,
   IconGridView,
   IconList,
 } from '@douyinfe/semi-icons';
-import { useNavigate } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import ListingDeletionModal from '../../ListingDeletionModal.jsx';
 import FilterButton from '../../filters/FilterButton.jsx';
 import ActiveFilterChips from '../../filters/ActiveFilterChips.jsx';
@@ -50,59 +36,64 @@ import {
   clearFilter,
   clearAllFilters,
 } from '../../../services/jobs/jobFilters.js';
+import { useUrlState, parseNumber, parseString, parseNullableBoolean } from '../../../hooks/useSearchParamState.js';
 import { useActions, useSelector } from '../../../services/state/store.js';
 import { xhrDelete, xhrPut, xhrPost, errorMessage } from '../../../services/xhr.js';
 import { debounce } from '../../../utils';
 import { IllustrationNoResult, IllustrationNoResultDark } from '@douyinfe/semi-illustrations';
 import JobsTable from '../../table/JobsTable.jsx';
+import JobActions from '../../jobs/JobActions.jsx';
+import { relativeTime } from '../../../services/time/relativeTime.js';
 
 import './JobGrid.less';
 import { useTranslation } from '../../../services/i18n/i18n.jsx';
 
-const { Text, Title } = Typography;
-
-const getPopoverContent = (text) => <article className="jobPopoverContent">{text}</article>;
+/**
+ * The page's filters, sort and pagination live in the URL rather than in component state.
+ *
+ * Opening a job and coming back used to land on page one with every filter cleared, because the
+ * state died with the component. In the URL it survives the round trip, the back button, a reload
+ * and a shared link - the same deal the listings page already makes, so the two pages behave alike.
+ *
+ * Module scope because `useUrlState` needs a schema that is stable across renders.
+ *
+ * @type {Record<string, {defaultValue: *, codec: {parse: Function, stringify: Function}}>}
+ */
+const JOBS_URL_STATE = {
+  page: { defaultValue: 1, codec: parseNumber },
+  sort: { defaultValue: 'name', codec: parseString },
+  dir: { defaultValue: 'asc', codec: parseString },
+  q: { defaultValue: null, codec: parseString },
+  active: { defaultValue: null, codec: parseNullableBoolean },
+};
 
 const JobGrid = () => {
   const t = useTranslation();
   const jobsData = useSelector((state) => state.jobsData);
   const actions = useActions();
   const navigate = useNavigate();
+  const sp = useSearchParams();
 
   const userSettings = useSelector((state) => state.userSettings.settings);
   const viewMode = userSettings?.jobs_view_mode ?? 'grid';
   const listingDeletionPref = userSettings?.listing_deletion_preference;
   const defaultDeleteType = listingDeletionPref?.hardDelete ? 'hard' : 'soft';
 
-  const [page, setPage] = useState(1);
   const pageSize = 12;
 
-  const [sortField, setSortField] = useState('name');
-  const [sortDir, setSortDir] = useState('asc');
-  const [freeTextFilter, setFreeTextFilter] = useState(null);
-  const [activityFilter, setActivityFilter] = useState(null);
+  // One piece of state for the whole group: every control here writes its own param plus the page
+  // reset, and separate per-key setters would race each other into the URL.
+  const { values: filterValues, setValue, setValues } = useUrlState(sp, JOBS_URL_STATE);
+  const { page, sort: sortField, dir: sortDir, q: freeTextFilter, active: activityFilter } = filterValues;
+
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [pendingDeletion, setPendingDeletion] = useState(null); // { type: 'job'|'listings', jobId }
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   // The same filter model the listings page uses, so the two pages behave identically rather than
-  // one hiding its filters behind a button while the other spreads them across the top.
-  const filterValues = { active: activityFilter };
+  // one hiding its filters behind a button while the other spreads them across the top. The patches
+  // the shared helpers return are keyed the same way as the URL state, so they apply as they are.
   const activeFilterCount = countActiveFilters(filterValues);
-
-  /**
-   * Apply a patch from the shared filter helpers to this page's local state.
-   * @param {Object} patch
-   * @returns {void}
-   */
-  const applyFilterPatch = (patch) => {
-    if ('active' in patch) {
-      setActivityFilter(patch.active);
-    }
-    if (patch.page != null) {
-      setPage(patch.page);
-    }
-  };
 
   const pendingJobIdRef = useRef(null);
   const evtSourceRef = useRef(null);
@@ -127,6 +118,16 @@ const JobGrid = () => {
   useEffect(() => {
     loadData();
   }, [page, sortField, sortDir, freeTextFilter, activityFilter]);
+
+  // Deleting the only job on the last page leaves that page empty, and the pager only draws while
+  // there are rows: the user was left looking at "no jobs yet" with jobs to show. Back to the last
+  // page that has any.
+  useEffect(() => {
+    const total = jobsData?.totalNumber ?? 0;
+    if (page > 1 && total > 0 && (jobsData?.result ?? []).length === 0) {
+      setValue('page', Math.max(1, Math.ceil(total / pageSize)));
+    }
+  }, [jobsData, page]);
 
   // SSE connection for live job status updates
   useEffect(() => {
@@ -173,11 +174,17 @@ const JobGrid = () => {
     };
   }, [actions.jobsData]);
 
-  const handleFilterChange = useMemo(() => debounce((value) => setFreeTextFilter(value), 500), []);
+  const handleFilterChange = useMemo(
+    () =>
+      debounce((value) => {
+        setValues({ q: value || null, page: 1 });
+      }, 500),
+    [],
+  );
 
   useEffect(() => {
     return () => {
-      handleFilterChange.cancel && handleFilterChange.cancel();
+      handleFilterChange.cancel?.();
     };
   }, [handleFilterChange]);
 
@@ -268,7 +275,7 @@ const JobGrid = () => {
   };
 
   const handlePageChange = (_page) => {
-    setPage(_page);
+    setValue('page', _page);
   };
 
   return (
@@ -279,6 +286,7 @@ const JobGrid = () => {
           prefix={<IconSearch />}
           showClear
           placeholder={t('jobs.searchPlaceholder')}
+          defaultValue={freeTextFilter ?? ''}
           onChange={handleFilterChange}
         />
 
@@ -286,7 +294,7 @@ const JobGrid = () => {
           prefix={t('jobs.sortPrefix')}
           style={{ width: 200 }}
           value={sortField}
-          onChange={(val) => setSortField(val)}
+          onChange={(val) => setValue('sort', val)}
         >
           <Select.Option value="name">{t('jobs.sortByName')}</Select.Option>
           <Select.Option value="numberOfFoundListings">{t('jobs.sortByListings')}</Select.Option>
@@ -295,7 +303,7 @@ const JobGrid = () => {
 
         <Button
           icon={sortDir === 'asc' ? <IconArrowUp /> : <IconArrowDown />}
-          onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+          onClick={() => setValue('dir', sortDir === 'asc' ? 'desc' : 'asc')}
           title={sortDir === 'asc' ? t('jobs.sortAscending') : t('jobs.sortDescending')}
         />
 
@@ -325,15 +333,15 @@ const JobGrid = () => {
 
       <ActiveFilterChips
         chips={describeActiveFilters(filterValues, { t })}
-        onRemove={(key) => applyFilterPatch(clearFilter(key))}
-        onClearAll={() => applyFilterPatch(clearAllFilters())}
+        onRemove={(key) => setValues(clearFilter(key))}
+        onClearAll={() => setValues(clearAllFilters())}
       />
 
       <FilterDrawer
         visible={filtersOpen}
         onClose={() => setFiltersOpen(false)}
         activeCount={activeFilterCount}
-        onClearAll={() => applyFilterPatch(clearAllFilters())}
+        onClearAll={() => setValues(clearAllFilters())}
       >
         <FilterGroup title={t('listings.filterGroupShow')}>
           <FilterHelp>{t('jobs.filterActivityHelp')}</FilterHelp>
@@ -343,7 +351,7 @@ const JobGrid = () => {
             value={activityFilter === null ? 'all' : String(activityFilter)}
             onChange={(e) => {
               const value = e.target.value;
-              applyFilterPatch({ active: value === 'all' ? null : value === 'true', page: 1 });
+              setValues({ active: value === 'all' ? null : value === 'true', page: 1 });
             }}
           >
             <Radio value="all">{t('jobs.filterAll')}</Radio>
@@ -362,167 +370,99 @@ const JobGrid = () => {
       )}
 
       {viewMode === 'grid' ? (
-        <Row gutter={[16, 16]}>
+        <div className="jobGrid__grid">
           {(jobsData?.result || []).map((job) => (
-            <Col key={job.id} xs={24} sm={12} md={12} lg={8} xl={6} xxl={6}>
-              <Card
-                className={`jobGrid__card${job.isOnlyShared ? '' : ' jobGrid__card--clickable'}`}
-                bodyStyle={{ padding: '12px' }}
-                onClick={job.isOnlyShared ? undefined : () => navigate(`/jobs/edit/${job.id}`)}
-              >
-                <div className="jobGrid__card__header">
-                  <div className="jobGrid__card__name">
-                    <span className={`jobGrid__card__dot${job.enabled ? ' jobGrid__card__dot--active' : ''}`} />
-                    <Title heading={6} ellipsis={{ showTooltip: true }} className="jobGrid__title">
-                      {job.name}
-                    </Title>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {job.isOnlyShared && (
-                      <Popover content={getPopoverContent(t('jobs.cardSharedReadOnly'))}>
-                        <div>
-                          <IconAlertTriangle style={{ color: 'rgba(var(--semi-yellow-7), 1)' }} />
-                        </div>
-                      </Popover>
-                    )}
-                    {job.running && (
-                      <Tag color="green" variant="light" size="small">
-                        {t('jobs.cardRunning')}
-                      </Tag>
-                    )}
-                    <Popover content={getPopoverContent(t('jobs.popoverViewListings'))}>
-                      <div>
-                        <Button
-                          type="tertiary"
-                          size="small"
-                          icon={<IconHome />}
-                          aria-label={t('jobs.popoverViewListings')}
-                          // The card itself opens the job for editing on click - this button sits
-                          // inside that click target, so it must stop the event from reaching the
-                          // card underneath it or a click meant for "show me the listings" would
-                          // also drop the user into the edit form behind it.
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/listings?job=${job.id}`);
-                          }}
-                        />
-                      </div>
-                    </Popover>
+            <div
+              key={job.id}
+              className={`jobGrid__card${job.isOnlyShared ? '' : ' jobGrid__card--clickable'}`}
+              onClick={job.isOnlyShared ? undefined : () => navigate(`/jobs/edit/${job.id}`)}
+            >
+              <div className="jobGrid__card__header">
+                <span className={`jobGrid__card__dot${job.enabled ? ' jobGrid__card__dot--active' : ''}`} />
+                <span className="jobGrid__card__name" title={job.name}>
+                  {job.name}
+                </span>
+                {job.running && <span className="jobGrid__card__running">{t('jobs.cardRunning')}</span>}
+                {job.isOnlyShared && (
+                  <Tooltip content={t('jobs.cardSharedReadOnly')}>
+                    <IconAlertTriangle style={{ color: 'rgba(var(--semi-yellow-7), 1)' }} />
+                  </Tooltip>
+                )}
+                <Tooltip content={t('jobs.popoverViewListings')}>
+                  <Button
+                    type="tertiary"
+                    size="small"
+                    icon={<IconHome />}
+                    aria-label={t('jobs.popoverViewListings')}
+                    // The card itself opens the job for editing on click - this button sits inside
+                    // that click target, so it must stop the event from reaching the card underneath
+                    // it or a click meant for "show me the listings" would also drop the user into
+                    // the edit form behind it.
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/listings?job=${job.id}`);
+                    }}
+                  />
+                </Tooltip>
+              </div>
+
+              {/* "When did this last run, and did it find anything" is the reason to open this
+                    page at all, and until now the answer was on no card. */}
+              <div className="jobGrid__card__lastRun">
+                {job.lastRunAt
+                  ? t('jobs.cardLastRun', { time: relativeTime(job.lastRunAt, t) })
+                  : t('jobs.lastRunNever')}
+              </div>
+
+              <div className="jobGrid__card__stats">
+                <div className="jobGrid__card__stat">
+                  <div className="jobGrid__card__statNumber">{job.numberOfFoundListings || 0}</div>
+                  <div className="jobGrid__card__statLabel" title={t('jobs.cardListings')}>
+                    {t('jobs.cardListings')}
                   </div>
                 </div>
-
-                <div className="jobGrid__card__stats">
-                  <div className="jobGrid__card__stat jobGrid__card__stat--blue">
-                    <span className="jobGrid__card__stat__number">{job.numberOfFoundListings || 0}</span>
-                    <span className="jobGrid__card__stat__label">
-                      <IconHome size="small" />{' '}
-                      <span className="jobGrid__card__stat__labelText" title={t('jobs.cardListings')}>
-                        {t('jobs.cardListings')}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="jobGrid__card__stat jobGrid__card__stat--orange">
-                    <span className="jobGrid__card__stat__number">{job.provider?.length || 0}</span>
-                    <span className="jobGrid__card__stat__label">
-                      <IconBriefcase size="small" />{' '}
-                      <span className="jobGrid__card__stat__labelText" title={t('jobs.cardProviders')}>
-                        {t('jobs.cardProviders')}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="jobGrid__card__stat jobGrid__card__stat--purple">
-                    <span className="jobGrid__card__stat__number">{job.notificationAdapter?.length || 0}</span>
-                    <span className="jobGrid__card__stat__label">
-                      <IconBell size="small" />{' '}
-                      <span className="jobGrid__card__stat__labelText" title={t('jobs.cardChannels')}>
-                        {t('jobs.cardChannels')}
-                      </span>
-                    </span>
+                <div className="jobGrid__card__stat">
+                  <div className="jobGrid__card__statNumber">{job.provider?.length || 0}</div>
+                  <div className="jobGrid__card__statLabel" title={t('jobs.cardProviders')}>
+                    {t('jobs.cardProviders')}
                   </div>
                 </div>
+                <div className="jobGrid__card__stat">
+                  <div className="jobGrid__card__statNumber">{job.notificationAdapter?.length || 0}</div>
+                  <div className="jobGrid__card__statLabel" title={t('jobs.cardChannels')}>
+                    {t('jobs.cardChannels')}
+                  </div>
+                </div>
+              </div>
 
-                <Divider margin="8px" />
+              <div className="jobGrid__card__divider" />
 
-                {/* Every control below is its own action (run, edit, delete, toggle...) - none of
+              {/* The dot in the header is the readout, this is the control. The word "Active"
+                    that used to sit beside it was a third way of saying the same thing, so the
+                    switch carries its name in an aria-label instead of in print. */}
+              {/* Every control below is its own action (run, edit, delete, toggle...) - none of
                     them should also fire the card's own "open for editing" click underneath it. */}
-                <div className="jobGrid__card__footer" onClick={(e) => e.stopPropagation()}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <Switch
-                      onChange={(checked) => onJobStatusChanged(job.id, checked)}
-                      checked={job.enabled}
-                      disabled={job.isOnlyShared}
-                      size="small"
-                    />
-                    <Text type="secondary" size="small">
-                      {t('jobs.cardActive')}
-                    </Text>
-                  </div>
-                  <div className="jobGrid__actions">
-                    <Popover content={getPopoverContent(t('jobs.popoverRunJob'))}>
-                      <div>
-                        <Button
-                          type="primary"
-                          style={{ background: '#3f8f68b5' }}
-                          size="small"
-                          theme="solid"
-                          icon={<IconPlayCircle />}
-                          disabled={job.isOnlyShared || job.running}
-                          onClick={() => onJobRun(job.id)}
-                        />
-                      </div>
-                    </Popover>
-                    <Popover content={getPopoverContent(t('jobs.popoverEditJob'))}>
-                      <div>
-                        <Button
-                          type="secondary"
-                          size="small"
-                          icon={<IconEdit />}
-                          disabled={job.isOnlyShared}
-                          onClick={() => navigate(`/jobs/edit/${job.id}`)}
-                        />
-                      </div>
-                    </Popover>
-                    <Popover content={getPopoverContent(t('jobs.popoverCloneJob'))}>
-                      <div>
-                        <Button
-                          type="tertiary"
-                          size="small"
-                          icon={<IconCopy />}
-                          disabled={job.isOnlyShared}
-                          onClick={() => navigate('/jobs/new', { state: { cloneFrom: job.id } })}
-                        />
-                      </div>
-                    </Popover>
-                    {/* The one action a shared job leaves open, see JobsTable for why: its listings
-                        are what was shared, and every one of them already carries a delete button
-                        of its own in the overview. The job itself remains the owner's. */}
-                    <Popover content={getPopoverContent(t('jobs.popoverDeleteListings'))}>
-                      <div>
-                        <Button
-                          type="danger"
-                          size="small"
-                          icon={<IconDescend2 />}
-                          onClick={() => onListingRemoval(job.id)}
-                        />
-                      </div>
-                    </Popover>
-                    <Popover content={getPopoverContent(t('jobs.popoverDeleteJob'))}>
-                      <div>
-                        <Button
-                          type="danger"
-                          size="small"
-                          icon={<IconDelete />}
-                          disabled={job.isOnlyShared}
-                          onClick={() => onJobRemoval(job.id)}
-                        />
-                      </div>
-                    </Popover>
-                  </div>
-                </div>
-              </Card>
-            </Col>
+              <div className="jobGrid__card__footer" onClick={(e) => e.stopPropagation()}>
+                <Switch
+                  onChange={(checked) => onJobStatusChanged(job.id, checked)}
+                  checked={job.enabled}
+                  disabled={job.isOnlyShared}
+                  size="small"
+                  aria-label={t('jobs.toggleEnabled')}
+                />
+                <JobActions
+                  job={job}
+                  density="card"
+                  onRun={onJobRun}
+                  onEdit={(id) => navigate(`/jobs/edit/${id}`)}
+                  onClone={(id) => navigate('/jobs/new', { state: { cloneFrom: id } })}
+                  onDeleteListings={onListingRemoval}
+                  onDeleteJob={onJobRemoval}
+                />
+              </div>
+            </div>
           ))}
-        </Row>
+        </div>
       ) : (
         <JobsTable
           jobs={jobsData?.result || []}

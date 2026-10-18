@@ -51,6 +51,41 @@ const IDEALISTA_PAGES = {
   'www.idealista.pt': 'idealista_es.html',
 };
 
+/**
+ * ImmoScout's two national sites are answered by one mobile API, so each needs a recording of its
+ * own under the same host. Keyed by the country their geocodes name.
+ */
+const IMMOSCOUT_LIST_FIXTURES = { de: 'immoscout_list.json', at: 'immoscoutAt_list.json' };
+
+/** The exposé counterpart of {@link IMMOSCOUT_LIST_FIXTURES}. */
+const IMMOSCOUT_DETAIL_FIXTURES = { de: 'immoscout_detail.json', at: 'immoscoutAt_detail.json' };
+
+/**
+ * Which national site a mobile API search URL belongs to.
+ *
+ * @param {string} urlStr A mobile API `search/list` URL.
+ * @returns {'de'|'at'}
+ */
+function immoscoutCountryOf(urlStr) {
+  const geocodes = new URL(urlStr).searchParams.get('geocodes') ?? '';
+  return geocodes === '/at' || geocodes.startsWith('/at/') ? 'at' : 'de';
+}
+
+/**
+ * The exposé ids a recorded search result holds.
+ *
+ * @param {any} listFixture A parsed `search/list` recording, or null when there is none.
+ * @returns {Set<string>}
+ */
+function exposeIdsOf(listFixture) {
+  return new Set(
+    (listFixture?.resultListItems ?? [])
+      .filter((item) => item?.type === 'EXPOSE_RESULT')
+      .map((item) => String(item?.item?.id))
+      .filter((id) => id !== 'undefined'),
+  );
+}
+
 async function tryReadFile(filepath) {
   try {
     return await readFile(filepath, 'utf-8');
@@ -134,22 +169,36 @@ export async function readFixture(url, options) {
 }
 
 /**
- * Immowelt's listings come from its search BFF, which can only be reached from inside a browser
- * that holds a DataDome cookie. Offline mode therefore replaces the whole transport module rather
- * than a `fetch` or the extractor, and serves the two fixtures it would have produced.
+ * Immowelt's and SeLoger's listings come from the search BFF they share, which can only be reached
+ * from inside a browser that holds a DataDome cookie. Offline mode therefore replaces the whole
+ * transport module rather than a `fetch` or the extractor, and serves the two fixtures it would
+ * have produced - the ones of whichever provider the site belongs to, since both run through the
+ * very same module.
  *
+ * @param {'immowelt'|'seloger'} [provider] the provider whose recording to serve
  * @returns {Promise<{classifieds: any[], detailHtml: string|null}>} the recorded BFF responses
  */
-export async function readImmoweltFixtures() {
+export async function readClassifiedFixtures(provider = 'immowelt') {
   const [rawClassifieds, detailHtml] = await Promise.all([
-    tryReadFile(path.join(FIXTURES_DIR, 'immowelt_classifieds.json')),
-    tryReadFile(path.join(FIXTURES_DIR, 'immowelt_detail.html')),
+    tryReadFile(path.join(FIXTURES_DIR, `${provider}_classifieds.json`)),
+    tryReadFile(path.join(FIXTURES_DIR, `${provider}_detail.html`)),
   ]);
 
   return {
     classifieds: rawClassifieds ? JSON.parse(rawClassifieds) : [],
     detailHtml,
   };
+}
+
+/**
+ * leboncoin's adverts come from its finder endpoint, asked from inside a browser page for the same
+ * reason immowelt's are, so offline mode replaces that transport module too.
+ *
+ * @returns {Promise<any[]>} the recorded adverts
+ */
+export async function readLeboncoinFixtures() {
+  const raw = await tryReadFile(path.join(FIXTURES_DIR, 'leboncoin_list.json'));
+  return raw ? JSON.parse(raw) : [];
 }
 
 /** Hosts whose providers request their pages themselves instead of going through the extractor. */
@@ -178,12 +227,20 @@ export function buildFetchMock() {
   let idealistaListData = null;
   let casaPlaces = null;
   let casaListData = null;
-  let listData = null;
-  let detailData = null;
+  // One mobile API answers for both ImmoScout national sites, so each has a recording of its own
+  // and the request says which one it wants. Keyed by country to keep that explicit.
+  const immoscoutListData = { de: null, at: null };
+  const immoscoutDetailData = { de: null, at: null };
+  let austrianExposeIds = null;
   let deutscheWohnenListData = null;
   let willhabenHtml = null;
   let flatfoxPins = null;
   let flatfoxListings = null;
+  let betterhomesList = null;
+  let betterhomesDetail = null;
+  let bieniciPlaces = null;
+  let bieniciList = null;
+  let bieniciDetail = null;
 
   return async (url, init) => {
     const urlStr = String(url);
@@ -298,26 +355,116 @@ export function buildFetchMock() {
       return { ok: true, status: 200, json: () => Promise.resolve(flatfoxListings) };
     }
 
+    // BETTERHOMES answers everything from one endpoint, so the action in the body is what says
+    // which fixture is being asked for. The detail is served for the advert it was recorded from
+    // and refused for any other id, exactly as the portal refuses one that has been taken down -
+    // which is what makes the activity probe's "gone" answer reachable offline.
+    if (/betterhomes\.(de|at|ch)\/apirequest/.test(urlStr)) {
+      if (betterhomesList == null) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, 'betterhomes_list.json'));
+        betterhomesList = raw ? JSON.parse(raw) : [];
+      }
+      if (betterhomesDetail == null) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, 'betterhomes_detail.json'));
+        betterhomesDetail = raw ? JSON.parse(raw) : { responseCode: 1000, responseData: null };
+      }
+
+      const request = JSON.parse(typeof init?.body === 'string' ? init.body : '{}');
+      if (request.action === 'Object/search') {
+        return { ok: true, status: 200, json: () => Promise.resolve(betterhomesList) };
+      }
+      const known = betterhomesDetail?.responseData?.id;
+      const body =
+        request.data?.id === known
+          ? betterhomesDetail
+          : { responseMessage: '', responseCode: 1000, responseData: null };
+      return { ok: true, status: 200, json: () => Promise.resolve(body) };
+    }
+
+    // Bien'ici answers a search in two steps: the place lookup the url's slugs are resolved with,
+    // keyed by what was asked, then the adverts. An advert's own endpoint answers for the one it was
+    // recorded from and 404s for any other id, exactly as it does for an advert taken down - which
+    // is what makes the activity probe's "gone" answer reachable offline.
+    if (urlStr.startsWith('https://res.bienici.com/place.json')) {
+      if (bieniciPlaces == null) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, 'bienici_places.json'));
+        bieniciPlaces = raw ? JSON.parse(raw) : {};
+      }
+      const asked = new URL(urlStr).searchParams.get('q') ?? '';
+      const place = bieniciPlaces[asked] ?? { name: 'Nulle Part', zoneIds: ['-1'] };
+      return { ok: true, status: 200, json: () => Promise.resolve(place) };
+    }
+
+    if (urlStr.startsWith('https://www.bienici.com/realEstateAds.json')) {
+      if (bieniciList == null) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, 'bienici_list.json'));
+        bieniciList = raw ? JSON.parse(raw) : { total: 0, realEstateAds: [] };
+      }
+      return { ok: true, status: 200, json: () => Promise.resolve(bieniciList) };
+    }
+
+    if (urlStr.startsWith('https://www.bienici.com/realEstateAd.json')) {
+      if (bieniciDetail == null) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, 'bienici_detail.json'));
+        bieniciDetail = raw ? JSON.parse(raw) : {};
+      }
+      const asked = new URL(urlStr).searchParams.get('id');
+      if (asked !== bieniciDetail.id) {
+        return { ok: false, status: 404, json: () => Promise.reject(new Error('Not Found')) };
+      }
+      return { ok: true, status: 200, json: () => Promise.resolve(bieniciDetail) };
+    }
+
+    // The one thing in a search request that says which national site it belongs to is its
+    // geocode: Austrian adverts live in the German index under `/at/...`, everything else is
+    // Germany's own.
     if (urlStr.includes('api.mobile.immobilienscout24.de/search/list')) {
-      if (!listData) {
-        const raw = await tryReadFile(path.join(FIXTURES_DIR, 'immoscout_list.json'));
-        listData = raw ? JSON.parse(raw) : { resultListItems: [] };
+      const country = immoscoutCountryOf(urlStr);
+      if (!immoscoutListData[country]) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, IMMOSCOUT_LIST_FIXTURES[country]));
+        immoscoutListData[country] = raw ? JSON.parse(raw) : { resultListItems: [] };
       }
 
       const requestedType = new URL(urlStr).searchParams.get('realestatetype');
-      const responseData = withRealEstateType(listData, requestedType);
+      const responseData = withRealEstateType(immoscoutListData[country], requestedType);
       return { ok: true, status: 200, json: () => Promise.resolve(responseData) };
     }
 
+    // The exposé endpoint carries no geocode - both sites' adverts share one identifier space -
+    // so the recording is picked by whether the id is one the Austrian list fixture holds. An id
+    // from neither reads the German exposé, which is what keeps the German suites untouched.
     if (urlStr.includes('api.mobile.immobilienscout24.de/expose/')) {
-      if (!detailData) {
-        const raw = await tryReadFile(path.join(FIXTURES_DIR, 'immoscout_detail.json'));
-        detailData = raw ? JSON.parse(raw) : { sections: [], contact: {} };
+      if (austrianExposeIds == null) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, IMMOSCOUT_LIST_FIXTURES.at));
+        austrianExposeIds = exposeIdsOf(raw ? JSON.parse(raw) : null);
       }
-      return { ok: true, status: 200, json: () => Promise.resolve(detailData) };
+      const exposeId = urlStr.split('/expose/').pop().split(/[?#]/)[0];
+      const country = austrianExposeIds.has(exposeId) ? 'at' : 'de';
+
+      if (!immoscoutDetailData[country]) {
+        const raw = await tryReadFile(path.join(FIXTURES_DIR, IMMOSCOUT_DETAIL_FIXTURES[country]));
+        immoscoutDetailData[country] = raw ? JSON.parse(raw) : { sections: [], contact: {} };
+      }
+      return { ok: true, status: 200, json: () => Promise.resolve(immoscoutDetailData[country]) };
+    }
+
+    // The token is minted per request and says nothing about the search, so like idealista's it is
+    // not recorded: offline mode hands out one of its own.
+    if (urlStr.includes('deutsche-wohnen.com/api/real-estate/search-token')) {
+      return { ok: true, status: 200, json: () => Promise.resolve({ token: 'offline', ttl: 900 }) };
     }
 
     if (urlStr.includes('deutsche-wohnen.com/api/deuwo-real-estate/list')) {
+      // Refused the way the endpoint refuses it, so a provider that stops sending the token fails
+      // here instead of passing against a recording that never asks for one.
+      if (new Headers(init?.headers).get('X-VON-Search-Token') !== 'offline') {
+        return {
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          json: () => Promise.resolve({ error: 'Unauthorized' }),
+        };
+      }
       if (!deutscheWohnenListData) {
         const raw = await tryReadFile(path.join(FIXTURES_DIR, 'deutscheWohnen_list.json'));
         deutscheWohnenListData = raw ? JSON.parse(raw) : { results: [] };

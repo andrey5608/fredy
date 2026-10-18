@@ -11,6 +11,9 @@ import { SegmentPart } from '../../../components/segment/SegmentPart';
 import { xhrDelete, xhrGet, errorMessage } from '../../../services/xhr';
 import { useLocale, useTranslation } from '../../../services/i18n/i18n.jsx';
 import { format } from '../../../services/time/timeService';
+import { relativeTime } from '../../../services/time/relativeTime.js';
+
+import './ConnectionsPage.less';
 
 /**
  * The MCP clients this user has let read their jobs and listings over OAuth, and the way to take
@@ -19,6 +22,10 @@ import { format } from '../../../services/time/timeService';
  * Revoking is immediate and final for that client: its refresh tokens and any access token still
  * in flight stop working, and it has to ask for consent again to come back. There is no edit here
  * because there is nothing to edit - a grant is a yes or a no.
+ *
+ * What each one may do is shown rather than assumed. Write access is a separate scope, and a
+ * connection approved before the write tools existed carries only `mcp:read` - it stays read-only
+ * until its owner reconnects it, and this column is the only place that says so.
  *
  * @returns {React.ReactElement}
  */
@@ -61,12 +68,28 @@ export default function ConnectionsPage() {
       render: (name) => name || t('settings.connections.unnamedClient'),
     },
     {
-      title: t('settings.connections.columnGrantedAt'),
-      dataIndex: 'grantedAt',
-      render: (grantedAt) => format(grantedAt, false, locale),
+      title: t('settings.connections.columnAccess'),
+      dataIndex: 'scopes',
+      render: (scopes) => {
+        const writes = (scopes ?? []).includes('mcp:write');
+        return (
+          <span className={`accessTag accessTag--${writes ? 'write' : 'read'}`}>
+            {t(writes ? 'settings.connections.accessWrite' : 'settings.connections.accessRead')}
+          </span>
+        );
+      },
     },
     {
-      title: '',
+      title: t('settings.connections.columnGrantedAt'),
+      dataIndex: 'grantedAt',
+      // Relativ, weil man von einer Freigabeliste wissen will, wie lange sie schon offen steht,
+      // und nicht, auf welches Datum das fiel. Das genaue Datum steht im Titel.
+      render: (grantedAt) => (
+        <span title={format(grantedAt, false, locale)}>{relativeTime(grantedAt, t, Date.now())}</span>
+      ),
+    },
+    {
+      title: t('settings.connections.columnAction'),
       dataIndex: 'clientId',
       render: (clientId) => (
         <Popconfirm
@@ -75,7 +98,7 @@ export default function ConnectionsPage() {
           okType="danger"
           onConfirm={() => revoke(clientId)}
         >
-          <Button type="danger" icon={<IconDelete />} size="small">
+          <Button type="danger" theme="borderless" size="small" icon={<IconDelete />}>
             {t('settings.connections.revoke')}
           </Button>
         </Popconfirm>

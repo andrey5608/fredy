@@ -120,8 +120,10 @@ describe('#immobilien.de payload parsing', () => {
       legacyId: 42,
       title: 'Wohnung',
       price: 700,
-      area: 60,
-      rooms: 2,
+      stats: [
+        { key: 'area', value: 60 },
+        { key: 'rooms', value: 2 },
+      ],
       address: '40219 Düsseldorf',
       images: ['https://example.org/1.jpg'],
       yearBuilt: '$undefined',
@@ -141,14 +143,39 @@ describe('#immobilien.de payload parsing', () => {
       images: ['https://example.org/1.jpg', 'https://example.org/2.jpg', '$undefined'],
     });
 
-    expect(normalized.images).toEqual(['https://example.org/1.jpg', 'https://example.org/2.jpg']);
-    expect(normalized.image).toBe(normalized.images[0]);
+    expect(normalized.images).toEqual([{ url: 'https://example.org/1.jpg' }, { url: 'https://example.org/2.jpg' }]);
+    expect(normalized.image).toBe(normalized.images[0].url);
   });
 
   it('reports an empty gallery rather than throwing when there are no images at all', () => {
     const normalized = provider.config.normalize({ legacyId: 42, title: 'Wohnung' });
     expect(normalized.images).toEqual([]);
     expect(normalized.image).toBeNull();
+  });
+
+  // The card lists its figures as labelled stats rather than as fields of their own, so a reader
+  // looking for `area` finds nothing and every listing arrives without a size.
+  it('reads the size and the rooms out of the stats the card lists', () => {
+    const normalized = provider.config.normalize({
+      legacyId: 42,
+      title: 'Wohnung',
+      price: 1092,
+      stats: [
+        { key: 'area', value: 52 },
+        { key: 'rooms', value: 2.5 },
+        { key: 'floor', value: '3. OG' },
+      ],
+    });
+
+    expect(normalized.size).toBe(52);
+    expect(normalized.rooms).toBe(2.5);
+  });
+
+  it('has no size or rooms for a card whose stats leave them out', () => {
+    const normalized = provider.config.normalize({ legacyId: 42, title: 'x', price: 700, stats: [] });
+
+    expect(normalized.size).toBeNull();
+    expect(normalized.rooms).toBeNull();
   });
 
   it('reports no price for a listing that is only available on request', () => {

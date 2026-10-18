@@ -17,11 +17,13 @@ vi.mock('../../lib/services/images/imageProcessor.js', () => ({
     compressed: false,
   })),
 }));
+vi.mock('../../lib/services/listings/listingPictures.js', () => ({ fetchListingPicture: vi.fn() }));
 vi.mock('../../lib/services/logger.js', () => ({ default: { warn: vi.fn(), error: vi.fn() } }));
 
 import { getImageById, userCanAccessListing } from '../../lib/services/storage/listingsStorage.js';
 import { readCachedImage, writeCachedImage } from '../../lib/services/images/imageCache.js';
 import { compressImageIfNeeded } from '../../lib/services/images/imageProcessor.js';
+import { fetchListingPicture } from '../../lib/services/listings/listingPictures.js';
 import imagesPlugin from '../../lib/api/routes/imagesRouter.js';
 
 describe('imagesRouter', () => {
@@ -78,28 +80,42 @@ describe('imagesRouter', () => {
     getImageById.mockReturnValue({ id: 'img-1', listing_id: 'listing-1', url: 'https://cdn.example.com/1.jpg' });
     userCanAccessListing.mockReturnValue(true);
     readCachedImage.mockResolvedValue(null);
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'image/png']]),
-      arrayBuffer: async () => new TextEncoder().encode('origin bytes').buffer,
+    fetchListingPicture.mockResolvedValue({
+      buffer: Buffer.from('origin bytes'),
+      mimeType: 'image/png',
+      url: 'https://cdn.example.com/1.jpg',
     });
-    // fastify's Headers-like access - Map has .get(), which is all the route uses.
 
     const res = await get('img-1');
 
     expect(res.statusCode).toBe(200);
     expect(res.headers['content-type']).toBe('image/png');
     expect(res.body).toBe('origin bytes');
+    expect(fetchListingPicture).toHaveBeenCalledWith('https://cdn.example.com/1.jpg');
     expect(compressImageIfNeeded).toHaveBeenCalled();
     expect(writeCachedImage).toHaveBeenCalledWith('img-1', expect.any(Buffer), 'image/png');
+  });
+
+  it('never fetches a scraped url with a bare fetch, only through the guarded picture fetcher', async () => {
+    getImageById.mockReturnValue({ id: 'img-1', listing_id: 'listing-1', url: 'http://169.254.169.254/latest' });
+    userCanAccessListing.mockReturnValue(true);
+    readCachedImage.mockResolvedValue(null);
+    fetchListingPicture.mockRejectedValue(new Error('Refusing to fetch this image: not a public address'));
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const res = await get('img-1');
+
+    expect(res.statusCode).toBe(502);
+    expect(fetchListingPicture).toHaveBeenCalledWith('http://169.254.169.254/latest');
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
   });
 
   it('returns 502 when the origin fetch fails', async () => {
     getImageById.mockReturnValue({ id: 'img-1', listing_id: 'listing-1', url: 'https://cdn.example.com/1.jpg' });
     userCanAccessListing.mockReturnValue(true);
     readCachedImage.mockResolvedValue(null);
-    vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('network down'));
+    fetchListingPicture.mockRejectedValue(new Error('network down'));
 
     const res = await get('img-1');
 
@@ -111,7 +127,9 @@ describe('imagesRouter', () => {
     getImageById.mockReturnValue({ id: 'img-1', listing_id: 'listing-1', url: 'https://cdn.example.com/1.jpg' });
     userCanAccessListing.mockReturnValue(true);
     readCachedImage.mockResolvedValue(null);
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({ ok: false, status: 404, headers: new Map() });
+    fetchListingPicture.mockRejectedValue(
+      new Error('Image fetch returned HTTP 404. Image URL: https://cdn.example.com/1.jpg'),
+    );
 
     const res = await get('img-1');
 
@@ -123,11 +141,10 @@ describe('imagesRouter', () => {
     userCanAccessListing.mockReturnValue(true);
     readCachedImage.mockResolvedValue(null);
     writeCachedImage.mockRejectedValue(new Error('disk full'));
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Map([['content-type', 'image/jpeg']]),
-      arrayBuffer: async () => new TextEncoder().encode('origin bytes').buffer,
+    fetchListingPicture.mockResolvedValue({
+      buffer: Buffer.from('origin bytes'),
+      mimeType: 'image/jpeg',
+      url: 'https://cdn.example.com/1.jpg',
     });
 
     const res = await get('img-1');

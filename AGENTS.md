@@ -30,7 +30,7 @@ yarn test:download-fixtures   # Re-download fresh provider HTML fixtures
 # Single test file
 TEST_MODE=offline npx vitest run test/provider/immoscout.test.js
 
-# Lint / Format
+# Lint / Format (oxlint + oxfmt, from the oxc toolchain)
 yarn lint && yarn lint:fix
 yarn format && yarn format:check
 
@@ -68,7 +68,9 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
 ### Plugin systems
 
 **Providers** (`lib/provider/*.js`) - each module exports:
-- `metaInformation` - `{ id, name, baseUrl }`, plus an optional `countries` (ISO 3166-1 alpha-2,
+- `metaInformation` - `{ id, name, baseUrl }`, plus an optional `hosts` (every domain the portal
+  serves the same application under, defaulting to `baseUrl`'s host; read by the job form's url
+  check in `ui/src/services/jobs/providerUrl.js`) and an optional `countries` (ISO 3166-1 alpha-2,
   lowercase). Absent means `['de']`, which is why no shipped provider declares it and why adding the
   field changed no existing installation. Resolved in `lib/services/providers/`: `countries.js` is
   the pure half (the default, normalisation, union) and is all the Nominatim client imports, since
@@ -77,7 +79,7 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
   boxes from `ui/src/components/map/countryBounds.js`. Where no provider exists to ask - home
   addresses, the listings map, the listing detail - the answer is the union across the jobs the user
   can see, and where the job form is open it is the providers ticked in it
-- `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activeTester()`. `url` is `null` here and there is no bound `filter`.
+- `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activityProbe()`. `url` is `null` here and there is no bound `filter`. A portal whose pages only answer a browser session (DataDome answers node with 403 whether an advert is online or not - immowelt, SeLoger) declares `browserActivityProbe(link, browser)` and `priceTracking.browserProbe(listing, browser)` instead; the alive-checker and the price tracker start one browser per run for them, and only when a due listing needs it.
 - `createConfig(sourceConfig, blacklist)` - returns a **fresh** `ProviderConfig` per job run: the template plus this run's `url`, `enabled`, and a `filter` closed over this run's blacklist.
 
 Providers are **stateless**. Nothing run-specific may live at module scope: two jobs can execute
@@ -112,6 +114,7 @@ An adapter *configuration* is separate from the adapter itself: it is a row in `
 | Migrations | `lib/services/storage/migrations/` | Numbered JS files each exporting `up(db)`; checksum-tracked in `schema_migrations` |
 | Extractor | `lib/services/extractor/` | Orchestrates Puppeteer + Cheerio; shared browser instance per job |
 | Listing documents | `lib/services/storage/listingAttachmentsStorage.js` | Uploaded exposés (`listing_attachments`), bytes and all. Type and filename guards in `lib/services/listings/attachmentTypes.js`; routes in `lib/api/routes/listingAttachmentsRouter.js` |
+| Listing pictures | `lib/services/storage/listingMediaStorage.js` | First picture as WebP bytes, the rest of the gallery as deflated urls (`listing_media`). Download and shrinking in `lib/services/listings/listingPictures.js` (sharp), background queue in `previewCaptureQueue.js`, served by `GET /api/listings/:id/image` |
 
 ### Uploaded documents live in the database
 
@@ -138,6 +141,37 @@ The type stored on a row comes from the file's magic bytes, never from the `Cont
 browser sent, because these files are served back from Fredy's own origin: a renamed `.html`
 getting through would be stored cross-site scripting. Responses carry `nosniff`, and only images
 go out `inline`.
+
+### Listing pictures live in the database too
+
+The browser used to load `listings.image_url` straight from the portal's CDN, so a listing's picture
+disappeared the day the portal took the advert down. Now the first picture is kept as bytes in
+`listing_media`, for the same reasons the exposés are (see above): the `/db` volume is what users
+persist, backups carry it, and the cascade disposes of it on every path a listing can leave by.
+
+- **First picture: bytes, small.** Downloaded once, scaled to at most 800px and re-encoded as WebP
+  q75 with `sharp`, typically 30 to 70 KB. Where re-encoding would not shrink it, the original is
+  kept. A platform without a sharp build keeps the portal's bytes up to 512 KB instead.
+- **Every further picture: urls, deflated.** The gallery a provider already loaded (`listing.images`,
+  see `lib/utils/listingImages.js`) costs no request, and twenty urls of one listing differ in little
+  but an id, so they deflate to about a quarter of their JSON. Bytes for twenty pictures would be a
+  megabyte per listing.
+- **Its own table.** The overview and detail reads select `l.*`, so a BLOB column on `listings`
+  would ride along on every page. `preview` is the table's last column, and nothing may
+  `SELECT *` from it.
+- **Never on the critical path.** The pipeline queues the capture after the area filter and does
+  not wait for it (`previewCaptureQueue.js`, two downloads at a time); a notification is never late
+  because a CDN is slow. A failed download is recorded and not retried for 24 hours.
+- **Backfill by looking.** Every `<img>` in the interface points at `GET /api/listings/:id/image`
+  (`listingPictureSrc` in `ui/src/services/listings/listingPictures.js`). With bytes kept it serves
+  them; otherwise it redirects to the portal, which is exactly what the browser did before, and
+  queues the capture so the next request finds them. Nothing walks the old listings.
+- **The download is guarded like the MCP photo tool's**, which now shares it: every redirect hop has
+  to pass `isPubliclyFetchableUrl`, and the stored type comes from the magic bytes (JPEG, PNG, GIF,
+  WebP only), served with `nosniff`, because these bytes are third-party content on Fredy's origin.
+
+A manual detail refetch stores the gallery the detail page carried, which is how a listing found
+before galleries were kept gets one.
 
 ### Frontend
 
@@ -207,8 +241,15 @@ setting has one home, and a second copy is a second answer waiting to disagree w
 
 **Colours that are legitimately literal**: scrims and hairlines drawn over listing photography,
 which stays photography in both themes; `#000` used as a mask stencil; white on the accent, which
-is dark red either way. The map basemap is the light OpenFreeMap style in both themes, so map
-overlays follow the page rather than inverting.
+is dark red either way; and MapLibre paint and marker colours (`ui/src/components/map/overlayLayers.js`,
+`darkBasemapPaint.js`, `markerColors.js`), because a map layer or marker takes a colour string and
+cannot read a custom property. Anything drawn in HTML around the map (legend, badges) still uses
+the tokens.
+
+**The map follows the theme.** The vector basemap is OpenFreeMap's `bright` style in the light theme
+and its `dark` style in the dark theme; satellite imagery is the same in both (`isDarkBasemap` in
+`ui/src/components/map/Map.jsx`). The overlays carry one paint set per basemap (`OVERLAY_PAINT.light`
+and `.dark`), and the canvas is dimmed on a bright basemap and lifted on the dark one.
 
 **Tracking.** Switching theme fires `CHANGE_THEME_DARK` or `CHANGE_THEME_LIGHT`. A tracking event
 carries a feature name and nothing else (`trackPoi` sends one string), so any value worth reporting
@@ -226,12 +267,17 @@ Two transports:
 1. **stdio** (`lib/mcp/stdio.js`) - for Claude Desktop/LM Studio; opens its own DB connection (main process need not be running)
 2. **HTTP** (`/api/mcp`) - authenticated via Bearer token (`mcp_token` column in `users` table)
 
-Tools: `list_jobs`, `get_job`, `list_listings`, `get_listing`, `get_current_date_time`. Responses are Markdown via `lib/mcp/mcpNormalizer.js`.
+Read tools: `list_jobs`, `get_job`, `list_listings`, `get_listing`, `get_photo_for_listing`, `calculate_financing`, `get_current_date_time`.
+Write tools: `add_listing_note`, `set_listing_notes`, `watch_listing`, `unwatch_listing`, and the four that create a job.
+Responses are Markdown via `lib/mcp/mcpNormalizer.js`.
+
+Job creation is a draft-based interview, not a single call: `lib/mcp/jobDraftStore.js` holds the state (in memory, per user, 30 min) and computes the next question; `lib/mcp/jobDraftContext.js` is the only part that reads the database and is what strips channel secrets. Write tools go through `authenticateWriteToolCall`, which also enforces the `mcp:write` OAuth scope and refuses non-admins while demo mode is on.
 
 ## Key Conventions
 
 - **ESM only** - `import`/`export` everywhere, no CommonJS
 - **JSDoc typedefs** (no TypeScript) in `lib/types/` - `listing.js`, `job.js`, `filter.js`, `providerConfig.js`
+- **Lint / format** - oxlint (`.oxlintrc.json`) and oxfmt (`.oxfmtrc.json`), both from the oxc toolchain. There is no ESLint and no Prettier; `eslint-disable` comments still work because oxlint reads them
 - **Copyright header** required on all `.js` files - enforced by `lint-staged` pre-commit hook via `copyright.js`
 - **`NoNewListingsWarning`** (`lib/errors.js`) is used as control flow to short-circuit the pipeline (not an error)
 - **Test fixtures** in `test/testFixtures/` - HTML/JSON snapshots per provider; `TEST_MODE=offline` mocks `puppeteerExtractor` and global `fetch` via `test/offlineFixtures.js`
