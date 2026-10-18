@@ -54,9 +54,11 @@ describe('listing images', () => {
     expect(images.every((image) => image.caption == null)).toBe(true);
   });
 
-  it('takes the whole Immowelt and SeLoger card gallery', () => {
+  // Immowelt is the portal that bot-walls this installation most, so it ships the cover only.
+  it('takes the whole SeLoger card gallery but only the Immowelt cover', () => {
     const [mitte] = json('immowelt_classifieds.json').map(immowelt.normalize);
-    expect(mitte.images.map((image) => image.url)).toEqual([mitte.image, expect.stringContaining('/39704533-')]);
+    expect(mitte.image).toBeTruthy();
+    expect(mitte.images).toBeUndefined();
     expect(seloger.normalize(json('seloger_classifieds.json')[0]).images).toHaveLength(8);
   });
 

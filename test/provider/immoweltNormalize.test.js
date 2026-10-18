@@ -70,21 +70,13 @@ describe('#immowelt normalize', () => {
     expect(mitte.image).toContain('mms.immowelt.de');
   });
 
-  it('carries the whole gallery, not just the first image', () => {
-    expect(mitte.images).toHaveLength(2);
-    expect(mitte.images[0].url).toBe(mitte.image);
-    expect(mitte.images.every((image) => image.url.includes('mms.immowelt.de'))).toBe(true);
+  it('keeps only the cover photo, so notifications upload one image from immowelt', () => {
+    expect(mitte.images).toBeUndefined();
+    expect(spandau.images).toBeUndefined();
   });
 
-  it('still reports a one-element gallery as an array', () => {
-    expect(spandau.images).toEqual([{ url: spandau.image }]);
-  });
-
-  it('drops gallery entries with no url rather than passing through undefined', () => {
-    const withBrokenEntry = structuredClone(classifieds[0]);
-    withBrokenEntry.gallery.images.push({ description: 'no url on this one' });
-
-    expect(provider.config.normalize(withBrokenEntry).images).toHaveLength(2);
+  it('asks the scheduler for an hour between two searches of one job', () => {
+    expect(provider.config.minRunIntervalMs).toBe(60 * 60_000);
   });
 
   // "10178 Mitte" alone geocodes to whichever Mitte the geocoder likes best; the city has to come

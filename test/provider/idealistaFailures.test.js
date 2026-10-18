@@ -4,7 +4,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { config } from '../../lib/provider/idealista.js';
+import { config, createConfig } from '../../lib/provider/idealista.js';
 import { call, forgetToken, resetPacing } from '../../lib/services/idealista/mobile-api.js';
 import { resetSearchMemory } from '../../lib/services/idealista/search.js';
 import { PORTALS } from '../../lib/services/idealista/portal.js';
@@ -198,5 +198,43 @@ describe('Idealista token endpoint backoff', () => {
     await refusal;
     await expect(call(IT, '/api/3.5/it/search')).rejects.toThrow(/silent/);
     expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe('Idealista throttling', () => {
+  const tooMany = () => Promise.resolve(new Response('<html>blocked</html>', { status: 429 }));
+
+  it('does not fall back to the website once the api has refused the installation', async () => {
+    serve(tooMany);
+
+    const pending = config.getListings(SEARCH_URL, {});
+    await vi.runAllTimersAsync();
+
+    await expect(pending).resolves.toEqual([]);
+    expect(fetchSearchHtml).not.toHaveBeenCalled();
+  });
+
+  it('still reads the website when the api merely fails', async () => {
+    serve(failures.http);
+
+    const pending = config.getListings(SEARCH_URL, {});
+    await vi.runAllTimersAsync();
+    await pending;
+
+    expect(fetchSearchHtml).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops asking for photos after the first refusal, and keeps every listing', async () => {
+    const fetchMock = serve(tooMany);
+    const provider = createConfig({ url: SEARCH_URL });
+    const listings = ['1', '2', '3'].map((code) => ({ id: code, link: `https://www.idealista.it/immobile/${code}/` }));
+
+    const pending = Promise.all(listings.map((listing) => provider.fetchDetails(listing, {})));
+    await vi.runAllTimersAsync();
+    const enriched = await pending;
+
+    expect(enriched).toEqual(listings);
+    const detailCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes('/detail/'));
+    expect(detailCalls).toHaveLength(1);
   });
 });

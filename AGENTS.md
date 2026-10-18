@@ -82,6 +82,34 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
 - `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activityProbe()`. `url` is `null` here and there is no bound `filter`. A portal whose pages only answer a browser session (DataDome answers node with 403 whether an advert is online or not - immowelt, SeLoger) declares `browserActivityProbe(link, browser)` and `priceTracking.browserProbe(listing, browser)` instead; the alive-checker and the price tracker start one browser per run for them, and only when a due listing needs it.
 - `createConfig(sourceConfig, blacklist)` - returns a **fresh** `ProviderConfig` per job run: the template plus this run's `url`, `enabled`, and a `filter` closed over this run's blacklist.
 
+`fetchDetails()` is **opt-in per user, not per provider**. The pipeline calls it only for providers
+listed in the user setting `provider_details` (Settings → Listing details; checked in
+`FredyPipelineExecutioner._fetchDetails`), because it costs a request per new listing. A provider
+whose `fetchDetails` works in isolation can therefore look broken in production: it is simply never
+called. This is how idealista's extra photos (`multimedia.images` from the detail endpoint, first 10
+kept) and its modification date silently did nothing until `idealista` was added to the list. When
+a feature "works in a test but not in the app" and hangs off `fetchDetails`, check this setting
+first (`SELECT value FROM settings WHERE name = 'provider_details'`). Details are fetched for new
+listings only, so enabling it never backfills rows that are already stored.
+
+A provider that bot-walls frequent callers can declare `minRunIntervalMs` on its config
+(`lib/types/providerConfig.js`). `jobExecutionService` then skips that provider for a job when the
+scheduler ticks inside the gap (in-memory, per `jobId|providerId`, so a restart searches once); a
+manual run ignores it. Immowelt sets it to an hour and keeps only its cover photo (`images` is not
+set), so notifications upload one image from its CDN.
+
+Idealista's api throttles (HTTP 407/429, or the edge dropping connections) are marked
+`error.throttled` in `mobile-api.js` (`isThrottled`). The search then returns what it has and does
+**not** fall back to the website (it sits behind the same wall; every fallback read in the logs came
+back 429). The search always runs to completion first; photos come second and are best-effort:
+after the first throttled detail request the rest of that run's `fetchDetails` calls return
+untouched, so the listings are stored with their thumbnail and no extra request lengthens the silence.
+
+Idealista advert links are rewritten into a language by the job's provider entry
+(`linkLanguage`, default `en`, `original` keeps the portal's link): `createConfig` wraps
+`normalize` and applies `withLinkLanguage` after the id is hashed, so the language never changes a
+listing's identity. An entry that never stored the field gets the default.
+
 Providers are **stateless**. Nothing run-specific may live at module scope: two jobs can execute
 concurrently (a manual run started while the scheduler is working), and shared mutable state let
 the second job overwrite the first one's URL and blacklist mid-run, storing listings under the
@@ -115,6 +143,33 @@ An adapter *configuration* is separate from the adapter itself: it is a row in `
 | Extractor | `lib/services/extractor/` | Orchestrates Puppeteer + Cheerio; shared browser instance per job |
 | Listing documents | `lib/services/storage/listingAttachmentsStorage.js` | Uploaded exposés (`listing_attachments`), bytes and all. Type and filename guards in `lib/services/listings/attachmentTypes.js`; routes in `lib/api/routes/listingAttachmentsRouter.js` |
 | Listing pictures | `lib/services/storage/listingMediaStorage.js` | First picture as WebP bytes, the rest of the gallery as deflated urls (`listing_media`). Download and shrinking in `lib/services/listings/listingPictures.js` (sharp), background queue in `previewCaptureQueue.js`, served by `GET /api/listings/:id/image` |
+
+### Never open the live database from a second process
+
+SQLite runs in WAL mode (`listings.db`, `-wal`, `-shm`) and the running app holds the only
+connection that is allowed to write. Do **not** open `/db/listings.db` from another process while
+the app is up - not a "quick read-only query", not a one-off `docker exec ... node script.mjs`, not
+`better-sqlite3`/`sqlite3` from the host on the bind mount. On Docker Desktop (bind mount into the
+VM) the file locks that tell SQLite "someone else still has this open" are not reliable: when the
+second process exits it can conclude it was the last connection, checkpoint, and **delete the WAL**.
+The app then keeps writing into an unlinked `listings.db-wal (deleted)` that new readers cannot see,
+and everything written since the last checkpoint is lost on the next restart. This happened: a
+listing that had been sent to Telegram never reached the database, and the settings and rows written
+by the ad-hoc scripts lived in a different WAL than the app's.
+
+How to look at data instead:
+- Through the app: the HTTP API (`/api/listings/:id`, from a logged-in browser console) or the MCP
+  tools. Logs (`docker logs fredy`) answer most "did it run / what was sent" questions.
+- From a **copy**: `cp /db/listings.db /db/listings.db-wal` inside the container (plain file copy,
+  no SQLite process), `docker cp` it out, and query the copy read-only on the host.
+- Writes (backfills, renaming an id, changing a setting): stop the container first
+  (`docker compose stop fredy`), take a copy of `listings.db*`, make the change, start it again, and
+  confirm with `ls -l /proc/<pid>/fd | grep listings` that nothing says `(deleted)`. Prefer a path
+  the app already has - a migration, an API route - over a script. Changing a user setting through
+  the app's own `upsertSettings` in a second process is still a second process.
+- Symptom to check when data "disappears" or the UI disagrees with the logs: `docker exec fredy sh -c
+  'ls -l /proc/$(pgrep -f "^node index.js")/fd | grep listings'`. Any `(deleted)` means the files
+  have diverged; copy `/proc/<pid>/fd/<n>` out before restarting anything.
 
 ### Uploaded documents live in the database
 

@@ -3,7 +3,7 @@
  * Licensed under Apache-2.0 with Commons Clause and Attribution/Naming Clause
  */
 
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EventEmitter } from 'node:events';
 
 describe('services/jobs/jobExecutionService', () => {
@@ -12,7 +12,7 @@ describe('services/jobs/jobExecutionService', () => {
   let calls;
   let state;
 
-  async function initService(settings = { demoMode: false }) {
+  async function initService(settings = { demoMode: false }, { intervalMs = 0, withinHours = false } = {}) {
     const root = (await import('node:path')).resolve('.');
     const svcPath = root + '/lib/services/jobs/jobExecutionService.js';
     const busPath = root + '/lib/services/events/event-bus.js';
@@ -47,7 +47,7 @@ describe('services/jobs/jobExecutionService', () => {
       sendToUsers: (...args) => calls.sent.push(args),
     }));
     vi.doMock(utilsPath, () => ({
-      duringWorkingHoursOrNotSet: () => false,
+      duringWorkingHoursOrNotSet: () => withinHours,
       getPackageVersion: async () => '0.0.0-test',
     }));
     vi.doMock(loggerPath, () => {
@@ -90,7 +90,7 @@ describe('services/jobs/jobExecutionService', () => {
     }));
 
     const mod = await import(svcPath);
-    mod.initJobExecutionService({ providers: state.providers, intervalMs: 0 });
+    mod.initJobExecutionService({ providers: state.providers, intervalMs });
     return mod;
   }
 
@@ -283,6 +283,49 @@ describe('services/jobs/jobExecutionService', () => {
       await initService({ demoMode: true });
       bus.emit('jobs:runOne', { jobId: 'demo-job' });
       await vi.waitFor(() => expect(calls.markFinished).toEqual(['demo-job']));
+    });
+  });
+
+  describe('minRunIntervalMs', () => {
+    // The scheduler ticks every 20 ms here; the startup pass is the first of those searches. Fake
+    // timers, so the service's self-rescheduling tick dies with the test instead of firing into the
+    // next one's counters.
+    afterEach(() => vi.useRealTimers());
+
+    const runScheduler = async (minRunIntervalMs) => {
+      state.providers = [
+        {
+          metaInformation: { id: 'p' },
+          createConfig: () => ({ url: 'https://p.example/', getListings: vi.fn(), minRunIntervalMs }),
+        },
+      ];
+      state.jobsById.j1 = { id: 'j1', enabled: true, userId: 'u1', provider: [{ id: 'p' }], blacklist: [] };
+      state.jobsList = [state.jobsById.j1];
+      state.users = [{ id: 'u1', isAdmin: false }];
+      vi.useFakeTimers();
+      await initService({ demoMode: false }, { intervalMs: 20, withinHours: true });
+      await vi.advanceTimersByTimeAsync(150);
+    };
+
+    it('searches a provider without a minimum on every scheduler tick', async () => {
+      await runScheduler(undefined);
+
+      expect(calls.pipeline.length).toBeGreaterThan(1);
+    });
+
+    it('skips the provider on scheduler ticks that fall inside the gap', async () => {
+      await runScheduler(60 * 60_000);
+
+      expect(calls.pipeline.length).toBe(1);
+    });
+
+    it('lets a manual run through regardless of the gap', async () => {
+      await runScheduler(60 * 60_000);
+
+      bus.emit('jobs:runOne', { jobId: 'j1' });
+      await vi.advanceTimersByTimeAsync(0);
+
+      expect(calls.pipeline.length).toBe(2);
     });
   });
 });
