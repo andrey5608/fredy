@@ -13,6 +13,9 @@ services:
     ports:
       - "9998:9998"
     restart: unless-stopped
+    depends_on:
+      redpanda:
+        condition: service_healthy
     # Resource limits to prevent runaway memory usage from Chromium
     deploy:
       resources:
@@ -24,3 +27,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  # Broker for the Kafka notification channel.
+  #
+  # Two listeners, because a client is told to reconnect to the *advertised* address and that must
+  # be reachable from where the client is: the Fredy container reaches redpanda:9092, the host
+  # reaches localhost:19092 (what `rpk` or `kcat` on your machine use).
+  redpanda:
+    container_name: redpanda
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=512M
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --set
+      - redpanda.auto_create_topics_enabled=true
+    ports:
+      - "19092:19092"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  redpanda-data:
