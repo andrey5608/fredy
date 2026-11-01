@@ -56,7 +56,8 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
       2. provider.getListings()            # API or Puppeteer+Cheerio
       3. provider.normalize(listing)       # raw → ParsedListing
       4. provider.filter(listing)          # blacklist + required fields
-      5. filter to hashes not yet in DB
+      5. filter to hashes not yet in DB; for price-tracked providers, a stored row with the same
+         link is the same advert at a new price: price change notification, not a new listing
       6. provider.fetchDetails()           # optional enrichment
       7. geocodeAddress()                  # optional lat/lng
       8. storeListings()
@@ -79,8 +80,9 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
   boxes from `ui/src/components/map/countryBounds.js`. Where no provider exists to ask - home
   addresses, the listings map, the listing detail - the answer is the union across the jobs the user
   can see, and where the job form is open it is the providers ticked in it
-- `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activityProbe()`. `url` is `null` here and there is no bound `filter`. A portal whose pages only answer a browser session (DataDome answers node with 403 whether an advert is online or not - immowelt, SeLoger) declares `browserActivityProbe(link, browser)` and `priceTracking.browserProbe(listing, browser)` instead; the alive-checker and the price tracker start one browser per run for them, and only when a due listing needs it.
+- `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activityProbe()`, and `needsBrowser: false` on a provider whose search and details never touch the browser (ImmoScout's mobile API, flatfox, the tecnocasa network), so a job run or detail fetch with only such providers starts no Chromium. `url` is `null` here and there is no bound `filter`. A portal whose pages only answer a browser session (DataDome answers node with 403 whether an advert is online or not - immowelt, SeLoger) declares `browserActivityProbe(link, browser)` and `priceTracking.browserProbe(listing, browser)` instead; the alive-checker and the price tracker start one browser per run for them, and only when a due listing needs it.
 - `createConfig(sourceConfig, blacklist)` - returns a **fresh** `ProviderConfig` per job run: the template plus this run's `url`, `enabled`, and a `filter` closed over this run's blacklist.
+- Optional `fetchListingByUrl(url, browser)` on the static template - reads one advert's page into a complete `ParsedListing`, or `null` when the page is no single advert or could not be read. It is what "Add listing" in the listings view calls. Build the provider's own search-card shape from the exposé and pass it through its `normalize`, so `link` and hash come out as a search run would produce them: a later run of the job recognises the stored row by both, and a different spelling stores the advert twice. The `/api/jobs/provider` response carries `addByUrl` per provider so the dialog can say "not supported yet" before anything is sent.
 
 `fetchDetails()` is **opt-in per user, not per provider**. The pipeline calls it only for providers
 listed in the user setting `provider_details` (Settings → Listing details; checked in
@@ -142,6 +144,7 @@ An adapter *configuration* is separate from the adapter itself: it is a row in `
 | Migrations | `lib/services/storage/migrations/` | Numbered JS files each exporting `up(db)`; checksum-tracked in `schema_migrations` |
 | Extractor | `lib/services/extractor/` | Orchestrates Puppeteer + Cheerio; shared browser instance per job |
 | Listing documents | `lib/services/storage/listingAttachmentsStorage.js` | Uploaded exposés (`listing_attachments`), bytes and all. Type and filename guards in `lib/services/listings/attachmentTypes.js`; routes in `lib/api/routes/listingAttachmentsRouter.js` |
+| Adding a listing by URL | `lib/services/listings/manualListingService.js` | `POST /api/listings`. Resolves the provider by exact host (`resolveProviderForUrl` in `lib/services/jobs/providerUrl.js`, mirrored in the UI copy), reads the advert with `fetchListingByUrl`, then runs `FredyPipelineExecutioner.ingest()`: the tail of a run (geocode, store, distances, similarity entry, picture, benchmark, scam check, travel times) without the filters and without a notification. The listing is stored under a job the user picks, so everything keyed on the job applies to it; `listings.added_manually` marks it, written on insert only |
 | Listing pictures | `lib/services/storage/listingMediaStorage.js` | First picture as WebP bytes, the rest of the gallery as deflated urls (`listing_media`). Download and shrinking in `lib/services/listings/listingPictures.js` (sharp), background queue in `previewCaptureQueue.js`, served by `GET /api/listings/:id/image` |
 
 ### Never open the live database from a second process
@@ -287,12 +290,15 @@ setting has one home, and a second copy is a second answer waiting to disagree w
 **Things CSS cannot switch, and how they are handled.** Two kinds:
 
 - *Canvas.* Charts are painted onto a canvas and keep whatever they were last painted with, so
-  `chartTheme.js` reads its colours from the custom properties through getters, and `<Layout>` in
-  `App.jsx` is keyed on the theme so everything below it remounts on a switch. Never reintroduce a
+  `chartTheme.js` reads its colours from the custom properties through getters when a chart is
+  built. The theme is only switched on the preferences page, where no chart is on screen, so every
+  chart is built after the switch. Nothing is remounted for it: `<Layout>` used to be keyed on the
+  theme, and that threw away whatever had been typed on the page and not saved. A chart placed
+  where the theme can change would have to be keyed on the theme itself. Never reintroduce a
   hardcoded hex there - the file used to carry a hand-maintained copy of the palette and it is gone.
-- *Assets.* The wordmark has a light and a dark cut, and no custom property can swap a PNG. Those
-  call sites read `currentTheme()` directly. Everything expressible as a colour should use the
-  tokens and let CSS do the work.
+- *Assets.* The wordmark has a light and a dark cut, and no custom property can swap a PNG. `Logo`
+  reads the theme from the store, as `App.jsx` does, so a switch re-renders it. Everything
+  expressible as a colour should use the tokens and let CSS do the work.
 
 **Colours that are legitimately literal**: scrims and hairlines drawn over listing photography,
 which stays photography in both themes; `#000` used as a mask stencil; white on the accent, which

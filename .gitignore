@@ -12,3 +12,4 @@ tools/release/config.json
 graft/
 /.playwright-mcp
 /docs/plans/
+.trail
