@@ -13,3 +13,5 @@ graft/
 /.playwright-mcp
 /docs/plans/
 .trail
+
+.env

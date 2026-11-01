@@ -58,17 +58,33 @@ services:
       retries: 5
       start_period: 20s
 
-  # Web UI for the broker above: http://localhost:19093
+  # Web UI for the broker above: http://localhost:19093, behind the login below.
+  # Not published itself: the only way in is through redpanda-console-auth.
   redpanda-console:
     container_name: redpanda-console
     image: docker.redpanda.com/redpandadata/console:latest
     environment:
       - KAFKA_BROKERS=redpanda:9092
-    ports:
-      - "19093:8080"
     depends_on:
       redpanda:
         condition: service_healthy
+    restart: unless-stopped
+
+  # The Redpanda Console has no login of its own (enterprise only), so this is it: basic auth with
+  # the credentials in .env (CONSOLE_USER, CONSOLE_PASSWORD_HASH). Bound to localhost; put a real
+  # proxy in front before exposing it any further.
+  redpanda-console-auth:
+    container_name: redpanda-console-auth
+    image: caddy:2-alpine
+    environment:
+      - CONSOLE_USER=${CONSOLE_USER:?set CONSOLE_USER in .env}
+      - CONSOLE_PASSWORD_HASH=${CONSOLE_PASSWORD_HASH:?set CONSOLE_PASSWORD_HASH in .env}
+    volumes:
+      - ./tools/redpanda-console/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:19093:80"
+    depends_on:
+      - redpanda-console
     restart: unless-stopped
 
 volumes:
