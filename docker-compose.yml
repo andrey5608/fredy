@@ -13,6 +13,9 @@ services:
     ports:
       - "9998:9998"
     restart: unless-stopped
+    depends_on:
+      redpanda:
+        condition: service_healthy
     # Resource limits to prevent runaway memory usage from Chromium
     deploy:
       resources:
@@ -24,3 +27,65 @@ services:
       timeout: 10s
       retries: 3
       start_period: 30s
+
+  # Broker for the Kafka notification channel.
+  #
+  # Two listeners, because a client is told to reconnect to the *advertised* address and that must
+  # be reachable from where the client is: the Fredy container reaches redpanda:9092, the host
+  # reaches localhost:19092 (what `rpk` or `kcat` on your machine use).
+  redpanda:
+    container_name: redpanda
+    image: docker.redpanda.com/redpandadata/redpanda:latest
+    command:
+      - redpanda
+      - start
+      - --mode=dev-container
+      - --smp=1
+      - --memory=512M
+      - --kafka-addr=internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr=internal://redpanda:9092,external://localhost:19092
+      - --set
+      - redpanda.auto_create_topics_enabled=true
+    ports:
+      - "19092:19092"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+
+  # Web UI for the broker above: http://localhost:19093, behind the login below.
+  # Not published itself: the only way in is through redpanda-console-auth.
+  redpanda-console:
+    container_name: redpanda-console
+    image: docker.redpanda.com/redpandadata/console:latest
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # The Redpanda Console has no login of its own (enterprise only), so this is it: basic auth with
+  # the credentials in .env (CONSOLE_USER, CONSOLE_PASSWORD_HASH). Bound to localhost; put a real
+  # proxy in front before exposing it any further.
+  redpanda-console-auth:
+    container_name: redpanda-console-auth
+    image: caddy:2-alpine
+    environment:
+      - CONSOLE_USER=${CONSOLE_USER:?set CONSOLE_USER in .env}
+      - CONSOLE_PASSWORD_HASH=${CONSOLE_PASSWORD_HASH:?set CONSOLE_PASSWORD_HASH in .env}
+    volumes:
+      - ./tools/redpanda-console/Caddyfile:/etc/caddy/Caddyfile:ro
+    ports:
+      - "127.0.0.1:19093:80"
+    depends_on:
+      - redpanda-console
+    restart: unless-stopped
+
+volumes:
+  redpanda-data:

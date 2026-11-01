@@ -1,0 +1,8 @@
+# Login in front of the Redpanda Console. The console's own login is an enterprise feature, so the
+# gate is basic auth here; CONSOLE_USER and CONSOLE_PASSWORD_HASH come from .env (see docker-compose.yml).
+:80 {
+	basic_auth {
+		{$CONSOLE_USER} {$CONSOLE_PASSWORD_HASH}
+	}
+	reverse_proxy redpanda-console:8080
+}
