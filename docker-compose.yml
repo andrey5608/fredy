@@ -58,5 +58,18 @@ services:
       retries: 5
       start_period: 20s
 
+  # Web UI for the broker above: http://localhost:19093
+  redpanda-console:
+    container_name: redpanda-console
+    image: docker.redpanda.com/redpandadata/console:latest
+    environment:
+      - KAFKA_BROKERS=redpanda:9092
+    ports:
+      - "19093:8080"
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   redpanda-data:
