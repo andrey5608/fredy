@@ -80,12 +80,10 @@ describe('FredyFooter.jsx', () => {
 });
 
 describe('App.jsx', () => {
-  // The footer shows the version and opens the release notes, so the banner is no longer the only
-  // place an update is announced. This fork keeps it because it can be dismissed: it does not push
-  // every page down for good, which is what upstream's removal was about.
-  it('keeps the update banner, but only the dismissable one', () => {
-    expect(app).toMatch(/VersionBanner/);
-    const banner = fs.readFileSync(path.join(root, 'ui/src/components/version/VersionBanner.jsx'), 'utf-8');
-    expect(banner).toMatch(/setDismissed/);
+  // The footer chip opens the release notes and the toast announces a version once, so the strip
+  // that used to sit at the top of the content area is gone for good.
+  it('has no update banner above the page content', () => {
+    expect(app).not.toMatch(/VersionBanner/);
+    expect(fs.existsSync(path.join(root, 'ui/src/components/version/VersionBanner.jsx'))).toBe(false);
   });
 });

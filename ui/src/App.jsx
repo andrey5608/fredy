@@ -19,7 +19,6 @@ import Navigation from './components/navigation/Navigation.jsx';
 import { Layout } from '@douyinfe/semi-ui-19';
 import FredyFooter from './components/footer/FredyFooter.jsx';
 import NewsModal from './components/news/NewsModal.jsx';
-import VersionBanner from './components/version/VersionBanner.jsx';
 import OnboardingTour from './components/tour/OnboardingTour.jsx';
 import { I18nProvider, availableLanguages } from './services/i18n/i18n.jsx';
 import DebugLoggingBanner from './components/debug/DebugLoggingBanner.jsx';
@@ -123,7 +122,6 @@ export default function FredyApp() {
   const initInFlight = React.useRef(false);
   const currentUser = useSelector((state) => state.user.currentUser);
   const settings = useSelector((state) => state.generalSettings.settings);
-  const versionUpdate = useSelector((state) => state.versionUpdate.versionUpdate);
   const language = useSelector((state) => state.userSettings.settings.language);
   const semiLocale = useSemiLocale(language ?? 'en');
   /*
@@ -238,7 +236,6 @@ export default function FredyApp() {
               </Sider>
               <Layout className="app__main">
                 <Content className="app__content">
-                  {versionUpdate?.newVersion && <VersionBanner />}
                   <DebugLoggingBanner />
                   {settings.demoMode && <DemoBanner />}
                   {!settings.demoMode && <NewsModal />}
