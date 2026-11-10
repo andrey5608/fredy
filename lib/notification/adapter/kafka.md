@@ -11,9 +11,9 @@ Authentication is off unless you fill in a SASL username (mechanism `plain`, `sc
 
 Fredy's `docker-compose.yml` starts a Redpanda broker next to Fredy.
 
-| Where Fredy runs | Brokers |
-|---|---|
-| Inside the compose stack | `redpanda:9092` |
+| Where Fredy runs               | Brokers           |
+| ------------------------------ | ----------------- |
+| Inside the compose stack       | `redpanda:9092`   |
 | On your machine (`yarn start`) | `localhost:19092` |
 
 Read the topic from your machine:

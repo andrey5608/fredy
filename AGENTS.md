@@ -79,7 +79,12 @@ scheduler (every N minutes) or manual trigger via POST /api/jobs/:id/run
   geocoder searches within the resolved countries; the map's `maxBounds` is the union of their
   boxes from `ui/src/components/map/countryBounds.js`. Where no provider exists to ask - home
   addresses, the listings map, the listing detail - the answer is the union across the jobs the user
-  can see, and where the job form is open it is the providers ticked in it
+  can see, and where the job form is open it is the providers ticked in it. An optional `currency`
+  (ISO 4217, absent means `EUR`) and `currencyByHost` (the exceptions, for a provider whose national
+  sites price differently) are read once, when the pipeline stores a listing; after that
+  `listings.currency` is the only source, because comparisons happen in SQL. `currency.js` in the
+  same directory holds the resolver. A row without one fails on the `NOT NULL` column by design, so
+  every writer has to set it
 - `config` - the **static** `ProviderConfig` template: `requiredFieldNames`, `crawlContainer`, `crawlFields`, `sortByDateParam`, `normalize()`, optional `getListings()`, `fetchDetails()`, `activityProbe()`, and `needsBrowser: false` on a provider whose search and details never touch the browser (ImmoScout's mobile API, flatfox, the tecnocasa network), so a job run or detail fetch with only such providers starts no Chromium. `url` is `null` here and there is no bound `filter`. A portal whose pages only answer a browser session (DataDome answers node with 403 whether an advert is online or not - immowelt, SeLoger) declares `browserActivityProbe(link, browser)` and `priceTracking.browserProbe(listing, browser)` instead; the alive-checker and the price tracker start one browser per run for them, and only when a due listing needs it.
 - `createConfig(sourceConfig, blacklist)` - returns a **fresh** `ProviderConfig` per job run: the template plus this run's `url`, `enabled`, and a `filter` closed over this run's blacklist.
 - Optional `fetchListingByUrl(url, browser)` on the static template - reads one advert's page into a complete `ParsedListing`, or `null` when the page is no single advert or could not be read. It is what "Add listing" in the listings view calls. Build the provider's own search-card shape from the exposé and pass it through its `normalize`, so `link` and hash come out as a search run would produce them: a later run of the job recognises the stored row by both, and a different spelling stores the advert twice. The `/api/jobs/provider` response carries `addByUrl` per provider so the dialog can say "not supported yet" before anything is sent.
@@ -138,7 +143,7 @@ An adapter *configuration* is separate from the adapter itself: it is a row in `
 |---|---|---|
 | Event bus | `lib/services/events/event-bus.js` | Plain `EventEmitter`; events: `jobs:runAll`, `jobs:runOne`, `jobs:status` |
 | SSE broker | `lib/services/sse/sse-broker.js` | Per-userId `Set<ServerResponse>`; heartbeat every 25s; pushes job status to UI |
-| Similarity cache | `lib/services/similarity-check/` | Per-job dedup, refreshed hourly. Two tiers: an exact SHA-256 over `jobId\|title\|price\|address`, then `listingFingerprint.js`, which matches the same flat across *different* providers on living space, rooms and location. Portals never agree on the headline, the address format, or what "price" means, so the hash tier alone never fired across providers |
+| Similarity cache | `lib/services/similarity-check/` | Per-job dedup, refreshed hourly. Two tiers: an exact SHA-256 over `jobId\|title\|price\|address`, then `listingFingerprint.js`, which matches the same flat across *different* providers on living space, rooms and location. Portals never agree on the headline, the address format, or what "price" means, so the hash tier alone never fired across providers. Holds only listings still on the market (not hidden, `is_active` not 0): `deactivateListings` evicts, `reactivateListings` adds back, and hard deletes skip rows the cache does not hold. An inactive row left in there swallowed the same flat re-listed on another portal. The pipeline hides duplicates with `hideAsDuplicates` (`listings.hidden_as_duplicate`), and deactivating a listing brings back the hidden copy that looked like it, unless another listing still online does too. Rows the user hid never come back this way |
 | Notification channels | `lib/services/storage/configuredAdapterStorage.js` | Saved adapter configurations (`configured_adapter`). Jobs store `[{configuredAdapterId}]`; `jobStorage` hydrates those back into `{id, name, fields}` on every read, so the pipeline never sees the indirection. Who may use vs. edit a channel: `lib/services/security/channelAccess.js` |
 | SqliteConnection | `lib/services/storage/SqliteConnection.js` | Singleton, WAL mode; `execute()`, `query()`, `withTransaction()` |
 | Migrations | `lib/services/storage/migrations/` | Numbered JS files each exporting `up(db)`; checksum-tracked in `schema_migrations` |
@@ -343,6 +348,13 @@ Job creation is a draft-based interview, not a single call: `lib/mcp/jobDraftSto
 - **`NoNewListingsWarning`** (`lib/errors.js`) is used as control flow to short-circuit the pipeline (not an error)
 - **Test fixtures** in `test/testFixtures/` - HTML/JSON snapshots per provider; `TEST_MODE=offline` mocks `puppeteerExtractor` and global `fetch` via `test/offlineFixtures.js`
 - **`conf/config.json`** is the only runtime config file; created with defaults if missing
+- **Logging** - `lib/services/logger.js`. `debug` is printed only in development unless `LOG_LEVEL`
+  (`debug`, `info`, `warn`, `error`) says otherwise; `docker-compose.yml` sets `LOG_LEVEL=info`; switch it to `debug` to see every HTTP request.
+  `lib/api/requestLogging.js` logs every HTTP request with its duration (`debug`), slow ones and 4xx
+  (`warn`), failing handlers (`error`) and a request still open after 10 s (`warn`, "where does it
+  hang"). `jobExecutionService` logs each run, job and provider with durations, and a watchdog names
+  the provider and pipeline step of a job that has run for over 3 minutes. Never put a query string
+  or a credential in a log line.
 
 ## Coding
 - After building the task, run the linter

@@ -26,6 +26,7 @@ let storage;
 let notify;
 let Fredy;
 let NoNewListingsWarning;
+let job;
 
 /** @returns {Promise<import('better-sqlite3').Database>} The production schema, in memory. */
 async function migratedDatabase() {
@@ -45,6 +46,7 @@ async function migratedDatabase() {
 }
 
 beforeEach(async () => {
+  job = { ...JOB };
   db = await migratedDatabase();
   vi.resetModules();
   vi.doMock(root + '/lib/services/storage/SqliteConnection.js', () => ({
@@ -60,7 +62,7 @@ beforeEach(async () => {
     getSettings: async () => ({ priceChangeThresholdPercent: 0 }),
     getUserSettings: () => ({ language: 'en' }),
   }));
-  vi.doMock(root + '/lib/services/storage/jobStorage.js', () => ({ getJob: () => JOB }));
+  vi.doMock(root + '/lib/services/storage/jobStorage.js', () => ({ getJob: () => job }));
   vi.doMock(root + '/lib/notification/notify.js', () => ({ send: vi.fn(() => []), sendPriceChange: vi.fn(() => []) }));
   vi.doMock(root + '/lib/services/similarity-check/similarityCache.js', () => ({ removeEntry: vi.fn() }));
 
@@ -75,6 +77,7 @@ afterEach(() => db.close());
 const advert = (hash, price, overrides = {}) => ({
   id: hash,
   price,
+  currency: 'EUR',
   size: 60,
   rooms: 2,
   title: 'Flat',
@@ -83,10 +86,40 @@ const advert = (hash, price, overrides = {}) => ({
   ...overrides,
 });
 const pipeline = (providerConfig = { priceTracking: { selector: '.price' } }) =>
-  new Fredy(providerConfig, JOB, 'kleinanzeigen', { checkAndAddEntry: () => false }, undefined);
+  new Fredy(providerConfig, job, 'kleinanzeigen', { checkAndAddEntry: () => false }, undefined);
 const rows = () => db.prepare(`SELECT hash, price, previous_price FROM listings`).all();
 
 describe('a stored advert at a new price', () => {
+  it('keeps tracking an excluded advert while rejecting new adverts in the excluded location', async () => {
+    job.excludedLocations = ['Neukölln'];
+    storage.storeListings(JOB.id, 'kleinanzeigen', [advert('hash-800', 800, { address: 'Berlin Neukölln' })]);
+    db.exec(`UPDATE listings SET last_price_check_at = 1`);
+    const fetchDetails = vi.fn(async (item) => item);
+    const execution = pipeline({
+      url: 'https://www.kleinanzeigen.de/search',
+      priceTracking: { selector: '.price' },
+      getListings: async () => [
+        advert('hash-750', 750, { address: 'Berlin Neukölln' }),
+        advert('hash-new', 700, { address: 'Berlin Neukölln', link: LINK + '-new' }),
+      ],
+      normalize: (item) => item,
+      filter: () => true,
+      requiredFieldNames: ['id', 'title', 'link'],
+      fetchDetails,
+    });
+
+    await execution.execute();
+
+    expect(rows()).toEqual([{ hash: 'hash-750', price: 750, previous_price: 800 }]);
+    expect(db.prepare(`SELECT price, source FROM listing_price_history WHERE source = 'scrape'`).all()).toEqual([
+      { price: 750, source: 'scrape' },
+    ]);
+    expect(db.prepare(`SELECT last_price_check_at FROM listings`).get().last_price_check_at).toBeGreaterThan(1);
+    expect(fetchDetails).not.toHaveBeenCalled();
+    expect(notify.send).not.toHaveBeenCalled();
+    expect(notify.sendPriceChange).not.toHaveBeenCalled();
+  });
+
   it('is reported as a price change, not stored and announced a second time', async () => {
     storage.storeListings(JOB.id, 'kleinanzeigen', [advert('hash-800', 800)]);
 
@@ -99,6 +132,17 @@ describe('a stored advert at a new price', () => {
     const [provider, [change]] = notify.sendPriceChange.mock.calls[0];
     expect(provider).toBe('kleinanzeigen');
     expect(change.direction).toBe('down');
+  });
+
+  it('announces the change in the currency stored on the row', async () => {
+    storage.storeListings(JOB.id, 'kleinanzeigen', [advert('hash-800', 800, { currency: 'CHF' })]);
+
+    await expect(pipeline()._splitOffPriceChanges([advert('hash-750', 750)])).rejects.toBeInstanceOf(
+      NoNewListingsWarning,
+    );
+
+    const [, [change]] = notify.sendPriceChange.mock.calls[0];
+    expect(change).toMatchObject({ oldPrice: '800 CHF', newPrice: '750 CHF' });
   });
 
   it('stays silent when the price tracker already reported it', async () => {
