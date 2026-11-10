@@ -52,9 +52,11 @@ describe('listing images', () => {
         price_per_sqm REAL,
         published_at INTEGER,
         added_manually INTEGER NOT NULL DEFAULT 0,
+        currency TEXT NOT NULL DEFAULT 'EUR',
+        hidden_as_duplicate INTEGER NOT NULL DEFAULT 0,
         UNIQUE (job_id, hash)
       );
-      CREATE TABLE jobs (id TEXT PRIMARY KEY, name TEXT, deal_type TEXT);
+      CREATE TABLE jobs (id TEXT PRIMARY KEY, name TEXT, deal_type TEXT, excluded_locations TEXT NOT NULL DEFAULT '[]');
       CREATE TABLE watch_list (id TEXT PRIMARY KEY, listing_id TEXT, user_id TEXT);
       -- Empty, but getListingById() also joins in travel times, so it has to exist.
       CREATE TABLE listing_travel_times (
@@ -98,6 +100,7 @@ describe('listing images', () => {
   const listing = (hash, overrides = {}) => ({
     id: hash,
     price: 1000,
+    currency: 'EUR',
     size: 60,
     rooms: 2,
     title: `Flat ${hash}`,
