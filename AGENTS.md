@@ -343,6 +343,13 @@ Job creation is a draft-based interview, not a single call: `lib/mcp/jobDraftSto
 - **`NoNewListingsWarning`** (`lib/errors.js`) is used as control flow to short-circuit the pipeline (not an error)
 - **Test fixtures** in `test/testFixtures/` - HTML/JSON snapshots per provider; `TEST_MODE=offline` mocks `puppeteerExtractor` and global `fetch` via `test/offlineFixtures.js`
 - **`conf/config.json`** is the only runtime config file; created with defaults if missing
+- **Logging** - `lib/services/logger.js`. `debug` is printed only in development unless `LOG_LEVEL`
+  (`debug`, `info`, `warn`, `error`) says otherwise; `docker-compose.yml` sets `LOG_LEVEL=info`; switch it to `debug` to see every HTTP request.
+  `lib/api/requestLogging.js` logs every HTTP request with its duration (`debug`), slow ones and 4xx
+  (`warn`), failing handlers (`error`) and a request still open after 10 s (`warn`, "where does it
+  hang"). `jobExecutionService` logs each run, job and provider with durations, and a watchdog names
+  the provider and pipeline step of a job that has run for over 3 minutes. Never put a query string
+  or a credential in a log line.
 
 ## Coding
 - After building the task, run the linter

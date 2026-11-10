@@ -7,6 +7,9 @@ services:
     image: ghcr.io/orangecoding/fredy
     environment:
       - NODE_ENV=production
+      # info: runs, jobs, providers, warnings and errors. Set debug for every HTTP request with its
+      # duration and the pipeline detail.
+      - LOG_LEVEL=info
     volumes:
       - ./conf:/conf
       - ./db:/db
